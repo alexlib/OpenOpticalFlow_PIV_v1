@@ -1,3 +1,4 @@
+"""
 function [Im1_shift,uxI,uyI]=shift_image_fun_refine_1(ux,uy,Im1,Im2)
 
 % ux and uy are the initial velocity fields in pixels/unit time in coarse image
@@ -77,7 +78,63 @@ end
 
 Im1_shift=uint8(Im1_shift1);
 
+"""
+import numpy as np
+from scipy.ndimage import gaussian_filter
+from skimage.transform import resize
 
+def shift_image_fun_refine_1(Im1, Im2, ux, uy):
+    Im1 = Im1.astype(np.float64)
+    Im2 = Im2.astype(np.float64)
+    ux = ux.astype(np.float64)
+    uy = uy.astype(np.float64)
 
+    m0, n0 = ux.shape
+    x0_normalized = np.linspace(1, n0, n0) / n0
+    y0_normalized = np.linspace(1, m0, m0) / m0
+    X, Y = np.meshgrid(x0_normalized, y0_normalized)
+
+    m1, n1 = Im1.shape
+    x1_normalized = np.linspace(1, n1, n1) / n1
+    y1_normalized = np.linspace(1, m1, m1) / m1
+
+    XI, YI = np.meshgrid(x1_normalized, y1_normalized)
+    uxI = (n1 / n0) * resize(ux, (len(y1_normalized), len(x1_normalized)), mode='reflect')
+    uyI = (m1 / m0) * resize(uy, (len(y1_normalized), len(x1_normalized)), mode='reflect')
+
+    Im1_shift0 = Im2.copy()
+    for i in range(m1):
+        for j in range(n1):
+            i_shift = i + round(uyI[i, j])
+            j_shift = j + round(uxI[i, j])
+            if 1 <= i_shift < m1 and 1 <= j_shift < n1:
+                Im1_shift0[i_shift, j_shift] = Im1[i, j]
+            else:
+                Im1_shift0[i, j] = Im1[i, j]
+
+    Im3 = Im1_shift0
+    Im1_shift1 = Im3.copy()
+    duxI = uxI - np.round(uxI)
+    duyI = uyI - np.round(uyI)
+
+    mask_size = 10
+    std = 0.6 * mask_size
+    duxI = gaussian_filter(duxI, std)
+    duyI = gaussian_filter(duyI, std)
+
+    dx = 1
+    dy = 1
+    dt = 1
+
+    term1 = np.zeros((m1-1, n1-1))
+    term2 = np.zeros((m1-1, n1-1))
+    for i in range(m1-1):
+        for j in range(n1-1):
+            term1[i, j] = (Im3[i, j+dx] * duxI[i, j+dx] - Im3[i, j] * duxI[i, j]) / dx
+            term2[i, j] = (Im3[i+dy, j] * duyI[i+dy, j] - Im3[i, j] * duyI[i, j]) / dy
+            Im1_shift1[i, j] = Im3[i, j] - (term1[i, j] + term2[i, j]) * dt
+
+    Im1_shift = Im1_shift1.astype(np.uint8)
+    return Im1_shift
 
 

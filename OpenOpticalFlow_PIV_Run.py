@@ -1,3 +1,4 @@
+"""
 %% This Matlab program integrats the optical flow method with the cross-correlation method
 %% for extraction of high-resolution velocity fields from particle images.  
 %% This hybrid method provides an additional tool to process PIV images, 
@@ -180,6 +181,119 @@ uy(1:edge_width,:)=uy((edge_width+1):(2*edge_width),:);
 % save Uy_vortexpair_corr_dt0p2.dat uy0 -ascii;
 % %  
  
- 
- 
+"""
+import numpy as np
+import imageio
+from scipy.ndimage import gaussian_filter
+from scipy.ndimage import zoom
+import matplotlib.pyplot as plt
+
+
+def OpticalFlowPhysics_fun(I1, I2, lambda_1, lambda_2):
+    # Implement the OpticalFlowPhysics_fun function here
+    pass
+
+def plots_set_1():
+    # Implement the plots_set_1 function here
+    pass
+
+def plots_set_2():
+    # Implement the plots_set_2 function here
+    pass
+
+# Load Images
+Im1 = imageio.imread('White_Oval_1.tif')
+Im2 = imageio.imread('White_Oval_2.tif')
+
+# Select region of interest
+index_region = 0
+Im1 = Im1.astype(np.float64)
+Im2 = Im2.astype(np.float64)
+
+if index_region == 1:
+    plt.imshow(Im1, cmap='gray')
+    plt.axis('image')
+    xy = plt.ginput(2)
+    plt.close()
+    x1, x2 = int(min(xy[0][0], xy[1][0])), int(max(xy[0][0], xy[1][0]))
+    y1, y2 = int(min(xy[0][1], xy[1][1])), int(max(xy[0][1], xy[1][1]))
+    I1 = Im1[y1:y2, x1:x2]
+    I2 = Im2[y1:y2, x1:x2]
+else:
+    I1 = Im1
+    I2 = Im2
+
+I1_original = I1
+I2_original = I2
+
+# Set the Parameters for Optical Flow Computation
+lambda_1 = 20
+lambda_2 = 2000
+no_iteration = 1
+scale_im = 1
+size_average = 0
+size_filter = 6
+
+# Correcting the global and local intensity change in images
+m1, n1 = I1.shape
+window_shifting = [1, n1, 1, m1]
+I1, I2 = correction_illumination(I1, I2, window_shifting, size_average)
+
+# Cleaning the left and upper edges
+edge_width = 1
+
+# Pre-processing for reducing random noise
+I1, I2 = pre_processing_a(I1, I2, scale_im, size_filter)
+I_region1 = I1
+I_region2 = I2
+
+# Initial correlation calculation for a coarse-grained velocity field
+pivPar = {
+    'iaSizeX': [64, 16, 8],
+    'iaStepX': [32, 8, 4],
+    'ccMethod': 'fft'
+}
+pivData1 = pivAnalyzeImagePair(I1, I2, pivPar)
+ux0 = pivData1['U']
+uy0 = pivData1['V']
+
+# Resize the initial velocity field
+n0, m0 = ux0.shape
+n1, m1 = I1.shape
+scale = round((n1 * m1 / (n0 * m0)) ** 0.5)
+ux0 = zoom(ux0, scale)
+uy0 = zoom(uy0, scale)
+
+# Generate the shifted image and calculate velocity difference iteratively
+ux = ux0
+uy = uy0
+k = 1
+while k <= no_iteration:
+    Im1_shift, uxI, uyI = shift_image_fun_refine_1(ux, uy, I1, I2)
+    I1 = Im1_shift.astype(np.float64)
+    I2 = I2.astype(np.float64)
+    dux, duy, vor, dux_horn, duy_horn, error2 = OpticalFlowPhysics_fun(I1, I2, lambda_1, lambda_2)
+    ux_corr = uxI + dux
+    uy_corr = uyI + duy
+    k += 1
+
+# Refined velocity field
+ux = ux_corr
+uy = uy_corr
+
+# Clean up the edges
+ux[:, :edge_width] = ux[:, edge_width:2*edge_width]
+uy[:, :edge_width] = uy[:, edge_width:2*edge_width]
+ux[:edge_width, :] = ux[edge_width:2*edge_width, :]
+uy[:edge_width, :] = uy[edge_width:2*edge_width, :]
+
+# Plot the results
+plots_set_1()
+plots_set_2()
+
+# Save results if needed
+# np.savetxt('Ux_vortexpair_hybrid_dt0p2.dat', ux)
+# np.savetxt('Uy_vortexpair_hybrid_dt0p2.dat', uy)
+# np.savetxt('Ux_vortexpair_corr_dt0p2.dat', ux0)
+# np.savetxt('Uy_vortexpair_corr_dt0p2.dat', uy0)
  

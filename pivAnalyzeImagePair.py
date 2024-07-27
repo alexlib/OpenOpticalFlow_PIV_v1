@@ -1,3 +1,4 @@
+"""
 function [pivData,ccFunction] = pivAnalyzeImagePair(im1,im2,pivPar)
 % pivAnalyzeImagePair - performs single- or multi-pass analysis of displacement between two images using PIV technique
 %
@@ -303,3 +304,99 @@ pivData.Ny = size(pivData.X,1);
 
 % 3. sort pivData's fields alphabeticcally
 pivData = orderfields(pivData);
+
+"""
+import numpy as np
+import time
+from scipy.ndimage import gaussian_filter
+# Import other necessary libraries for image processing and PIV analysis
+
+def piv_analyze_image_pair(im1, im2):
+    pivPar = {}
+    pivData = {}
+    pivPar['imMask1'] = None
+    pivPar['imMask2'] = None
+
+    # Image preprocessing
+    pivPar['iaPreprocMethod'] = 'MinMax'
+    pivPar['iaMinMaxSize'] = 7
+    pivPar['iaMinMaxLevel'] = 16
+
+    # Set the windowing function
+    pivPar['ccWindow'] = 'Gauss2'
+
+    # Vector validation settings
+    pivPar['vlMinCC'] = 0.3
+    pivPar['vlPasses'] = [1, 1, 1, 1, 1]
+    pivPar['vlDist'] = 2
+    pivPar['vlTresh'] = 3
+    pivPar['vlEps'] = 0.08
+
+    # Vector smoothing settings
+    pivPar['smMethod'] = 'smoothn'
+    pivPar['smSigma'] = 0.2
+
+    # Set remaining parameters and run the analysis
+    pivParIn, pivData = piv_params(pivData, pivPar, 'defaults')
+    pivData['infCompTime'] = []
+
+    # Loop for all required passes
+    for kp in range(5):
+        timer = time.time()
+        pivData0 = pivData.copy()
+
+        # Extract parameters for the corresponding pass
+        pivPar = piv_params(pivData, pivParIn, 'singlePass', kp + 1)
+
+        # Find interrogation areas in images, shift or deform them if required
+        exIm1, exIm2, pivData = piv_interrogate(im1, im2, pivData, pivPar)
+
+        # Compute cross-correlation between interrogation areas
+        if (kp == len(pivParIn['anNpasses']) - 1) and nargout > 1:
+            pivData, ccFunction = piv_cross_corr(exIm1, exIm2, pivData, pivPar)
+        else:
+            pivData = piv_cross_corr(exIm1, exIm2, pivData, pivPar)
+
+        # Apply predictor-corrector to the velocity data
+        pivData = piv_corrector(pivData, pivData0, pivPar)
+
+        # Validate velocity field
+        pivData = piv_validate(pivData, pivPar)
+
+        # Interpolate invalid velocity vectors
+        pivData = piv_replace(pivData, pivPar)
+
+        # Smooth the velocity field
+        pivData = piv_smooth(pivData, pivPar)
+
+        # Save the information about the actual pass
+        pivData['infPassNo'] = kp + 1
+
+        # Show the plot if required
+        if 'qvPair' in pivPar and len(pivPar['qvPair']) > 0:
+            piv_quiver(pivData, pivPar['qvPair'])
+            title = f"Pass no. {kp + 1}, IA size {pivPar['iaSizeX']}x{pivPar['iaSizeY']}, grid step {pivPar['iaStepX']}x{pivPar['iaStepY']}"
+            print(title)  # Replace with actual plotting code
+            # drawnow equivalent in Python
+
+        # Remove temporary data from pivData
+        pivData.pop('ccW', None)
+        pivData = dict(sorted(pivData.items()))
+
+        # Get the computational time
+        pivData['infCompTime'].append(time.time() - timer)
+
+    # Remove temporary data from pivData
+    pivData.pop('imArray1', None)
+    pivData.pop('imArray2', None)
+    pivData.pop('imMaskArray1', None)
+    pivData.pop('imMaskArray2', None)
+
+    # Add additional fields
+    pivData['Nx'] = pivData['X'].shape[1]
+    pivData['Ny'] = pivData['X'].shape[0]
+
+    # Sort pivData's fields alphabetically
+    pivData = dict(sorted(pivData.items()))
+
+    return pivData
