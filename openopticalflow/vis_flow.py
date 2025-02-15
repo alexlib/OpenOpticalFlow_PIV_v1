@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
+from shift_image_fun_refine_1 import shift_image_fun_refine_1
 
 def vis_flow(Vx, Vy, gx=30, offset=1, mag=1, col='b'):
     """
