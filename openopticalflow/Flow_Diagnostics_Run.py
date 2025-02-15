@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import imageio.v3 as iio
 import matplotlib.pyplot as plt
 from typing import Tuple
 
@@ -108,8 +109,8 @@ def main():
     Main program for extraction of velocity field from a pair of flow visualization images.
     """
     # Read a pair of images
-    Im1 = cv2.imread('../images/White_oval_1.tif', cv2.IMREAD_GRAYSCALE)
-    Im2 = cv2.imread('../images/White_Oval_2.tif', cv2.IMREAD_GRAYSCALE)
+    Im1 = iio.imread('../images/White_Oval_1.tif')
+    Im2 = iio.imread('../images/White_Oval_2.tif')
 
     # Set the parameters for optical flow computation
     lambda_1 = 20  # Horn-Schunck estimator for initial field

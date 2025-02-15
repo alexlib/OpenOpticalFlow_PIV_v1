@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.ndimage import convolve
+from typing import Tuple
 
 def liu_shen_estimator(I0: np.ndarray, I1: np.ndarray, f: np.ndarray, dx: int, dt: int, lambda_: float, tol: float, maxnum: int, u0: np.ndarray, v0: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """

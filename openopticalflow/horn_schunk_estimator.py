@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.ndimage import convolve
+from typing import Tuple
 
 def horn_schunk_estimator(Ix: np.ndarray, Iy: np.ndarray, It: np.ndarray, lambda_: float, tol: float, maxnum: int) -> Tuple[np.ndarray, np.ndarray]:
     """
