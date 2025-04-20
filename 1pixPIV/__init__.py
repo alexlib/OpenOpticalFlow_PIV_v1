@@ -6,4 +6,4 @@ using cross-correlation methods.
 """
 
 # Import main functions to make them available at package level
-from .pivAnalyzeImagePair import piv_analyze_image_pair
+from .piv_parameters import PIVParameters

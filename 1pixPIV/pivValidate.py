@@ -149,7 +149,7 @@
 # % initialize fields
 import numpy as np
 import time
-from .piv_parameters import PIVParameters
+from piv_parameters import PIVParameters
 
 def piv_validate(piv_data, piv_par):
     def medianfast(in_array):

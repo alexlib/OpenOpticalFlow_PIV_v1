@@ -129,10 +129,14 @@ def inpaint_nans(A, method=0):
     nhv = hv_springs.shape[0]
     springs = spdiags([np.ones(nhv), -np.ones(nhv)], [0, 1], nhv, nm)
 
-    rhs = -springs[:, known_list] @ A[known_list]
+    # Use matrix multiplication instead of subscripting
+    rhs = -springs.dot(A[known_list])
 
     B = A.copy()
-    B[nan_list[:, 0]] = linalg.spsolve(springs[:, nan_list[:, 0]], rhs)
+    # Extract the submatrix for nan_list
+    nan_indices = nan_list[:, 0]
+    springs_sub = springs.tocsc()[:, nan_indices]
+    B[nan_indices] = linalg.spsolve(springs_sub, rhs)
 
   elif method == 5:
     fda = spdiags([], [], nm, nm)
@@ -177,11 +181,14 @@ def inpaint_nans(A, method=0):
     if nl > 0:
       fda += spdiags([np.ones(nl), -np.ones(nl)], [n+1, 0], nm, nm)
 
-    rhs = -fda[:, known_list] @ A[known_list]
+    # Use matrix multiplication instead of subscripting
+    rhs = -fda.dot(A[known_list])
 
     B = A.copy()
     k = nan_list[:, 0]
-    B[k] = linalg.spsolve(fda[k][:, k], rhs[k])
+    # Extract the submatrix for k
+    fda_sub = fda.tocsr()[k, :].tocsc()[:, k]
+    B[k] = linalg.spsolve(fda_sub, rhs[k])
 
   return B.reshape((n, m))
 

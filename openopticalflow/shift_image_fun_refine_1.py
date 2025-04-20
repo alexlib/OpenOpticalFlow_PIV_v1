@@ -24,11 +24,36 @@ def shift_image_fun_refine_1(ux, uy, Im1, Im2):
     """
     m1, n1 = Im1.shape
     m2, n2 = Im2.shape
-    flow = np.stack((ux, uy), axis=-1)
-    Im1_shift = cv2.remap(Im1, flow, None, cv2.INTER_LINEAR)
+    # Create proper map for cv2.remap
+    h, w = Im1.shape
+    y_coords, x_coords = np.mgrid[0:h, 0:w].astype(np.float32)
 
-    flow_inv = np.stack((-ux, -uy), axis=-1)
-    Im2_shift = cv2.remap(Im2, flow_inv, None, cv2.INTER_LINEAR)
+    # Resize velocity field to match image dimensions if needed
+    if ux.shape != Im1.shape:
+        from scipy.ndimage import zoom
+        zoom_factor_y = h / ux.shape[0]
+        zoom_factor_x = w / ux.shape[1]
+        ux_resized = zoom(ux, (zoom_factor_y, zoom_factor_x))
+        uy_resized = zoom(uy, (zoom_factor_y, zoom_factor_x))
+    else:
+        ux_resized = ux
+        uy_resized = uy
+
+    # Add displacement to coordinates
+    map_x = (x_coords + ux_resized).astype(np.float32)
+    map_y = (y_coords + uy_resized).astype(np.float32)
+
+    # Ensure images are uint8 for OpenCV
+    Im1_uint8 = Im1.astype(np.uint8) if Im1.dtype != np.uint8 else Im1
+    Im2_uint8 = Im2.astype(np.uint8) if Im2.dtype != np.uint8 else Im2
+
+    # Remap the image
+    Im1_shift = cv2.remap(Im1_uint8, map_x, map_y, cv2.INTER_LINEAR)
+
+    # Inverse mapping
+    map_x_inv = (x_coords - ux_resized).astype(np.float32)
+    map_y_inv = (y_coords - uy_resized).astype(np.float32)
+    Im2_shift = cv2.remap(Im2_uint8, map_x_inv, map_y_inv, cv2.INTER_LINEAR)
 
     uxI, uyI = cv2.calcOpticalFlowFarneback(Im1_shift, Im2_shift, None, 0.5, 3, 15, 3, 5, 1.2, 0)[..., 0], cv2.calcOpticalFlowFarneback(Im1_shift, Im2_shift, None, 0.5, 3, 15, 3, 5, 1.2, 0)[..., 1]
 

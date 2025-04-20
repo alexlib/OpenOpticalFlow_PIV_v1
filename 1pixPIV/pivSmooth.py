@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.ndimage import gaussian_filter
 from smoothn_fixed import smoothn
-from .piv_parameters import PIVParameters
+from piv_parameters import PIVParameters
 
 def piv_smooth(piv_data, piv_par):
     """

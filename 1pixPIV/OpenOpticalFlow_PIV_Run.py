@@ -263,6 +263,11 @@ pivData1 = piv_analyze_image_pair(I1, I2, pivPar)
 ux0 = pivData1['U']
 uy0 = pivData1['V']
 
+# Handle 3D arrays (if the result is a 3D array with a single time slice)
+if len(ux0.shape) > 2:
+    ux0 = ux0[:, :, 0]
+    uy0 = uy0[:, :, 0]
+
 # Resize the initial velocity field
 n0, m0 = ux0.shape
 n1, m1 = I1.shape

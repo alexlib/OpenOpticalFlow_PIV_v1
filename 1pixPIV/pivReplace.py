@@ -3,10 +3,10 @@ from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from inpaint_nans import inpaint_nans
+from inpaint_nans_simple import inpaint_nans
 from inpaint_nans3 import inpaint_nans3
 from inpaintn import inpaintn
-from .piv_parameters import PIVParameters
+from piv_parameters import PIVParameters
 
 def piv_replace(piv_data, piv_par):
     """
