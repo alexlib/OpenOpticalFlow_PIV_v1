@@ -1,6 +1,5 @@
 import numpy as np
-import cv2
-from scipy.ndimage import gaussian_filter
+from scipy.ndimage import gaussian_filter, zoom
 from typing import Tuple
 
 def pre_processing_a(Im1: np.ndarray, Im2: np.ndarray, scale_im: float, size_filter: int) -> Tuple[np.ndarray, np.ndarray]:
@@ -21,8 +20,10 @@ def pre_processing_a(Im1: np.ndarray, Im2: np.ndarray, scale_im: float, size_fil
 
     # Resize images
     if scale_im < 1:
-        Im1 = cv2.resize(Im1, None, fx=scale_im, fy=scale_im, interpolation=cv2.INTER_AREA)
-        Im2 = cv2.resize(Im2, None, fx=scale_im, fy=scale_im, interpolation=cv2.INTER_AREA)
+        # Use scipy.ndimage.zoom instead of cv2.resize
+        # zoom uses a scale factor directly
+        Im1 = zoom(Im1, scale_im, order=1)  # order=1 for bilinear interpolation
+        Im2 = zoom(Im2, scale_im, order=1)
 
     # Apply Gaussian filter to images
     Im1 = gaussian_filter(Im1, sigma=size_filter)
