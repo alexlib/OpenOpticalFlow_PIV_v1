@@ -1,8 +1,8 @@
 """
 %% This Matlab program integrats the optical flow method with the cross-correlation method
-%% for extraction of high-resolution velocity fields from particle images.  
-%% This hybrid method provides an additional tool to process PIV images, 
-%% which combines the advantages of the optical flow method and cross-correlation method.  
+%% for extraction of high-resolution velocity fields from particle images.
+%% This hybrid method provides an additional tool to process PIV images,
+%% which combines the advantages of the optical flow method and cross-correlation method.
 
 close all
 clear all
@@ -28,7 +28,7 @@ Im2=imread('White_Oval_2.tif');
 
 
 %% Selete region of interest, "0" for processing the whole image, "1" for processing a selected region
-index_region=0; 
+index_region=0;
 
 Im1=double(Im1);
 Im2=double(Im2);
@@ -43,7 +43,7 @@ if (index_region == 1)
     x2=floor(max(xy(:,1)));
     y1=floor(min(xy(:,2)));
     y2=floor(max(xy(:,2)));
-    I1=double(Im1(y1:y2,x1:x2)); 
+    I1=double(Im1(y1:y2,x1:x2));
     I2=double(Im2(y1:y2,x1:x2));
 elseif (index_region == 0)
     I1=Im1;
@@ -56,7 +56,7 @@ I2_original=I2;
 
 %% Set the Parameters for Optical Flow Computation
 
-% Set the lagrange multipleirs in optical computation 
+% Set the lagrange multipleirs in optical computation
 lambda_1=20;  % the Horn_schunck estimator for initial field
 lambda_2=2000; % the Liu-Shen estimator for refined estimation
 
@@ -66,7 +66,7 @@ no_iteration=1; % fixed
 
 %% Initial coarse field estimation in the coarse-to-fine iterative process,
 %% scale_im is a scale factor for down-sizing of images
-scale_im=1; 
+scale_im=1;
 %% For Image Pre-Processing
 
 %% For local illumination intensity adjustment, To bypass it, set size_average = 0
@@ -102,10 +102,10 @@ I_region2=I2;
 Im1=I1;
 Im2=I2;
 
-pivPar.iaSizeX = [64 16 8];     % size of interrogation area in X 
-pivPar.iaStepX = [32 8 4];       % grid spacing of velocity vectors in X 
+pivPar.iaSizeX = [64 16 8];     % size of interrogation area in X
+pivPar.iaStepX = [32 8 4];       % grid spacing of velocity vectors in X
 
-pivPar.ccMethod = 'fft'; 
+pivPar.ccMethod = 'fft';
 
 [pivData1] = pivAnalyzeImagePair(Im1,Im2,pivPar);
 
@@ -135,18 +135,18 @@ uy=uy0;
 k=1;
 while k<=no_iteration
    [Im1_shift,uxI,uyI]=shift_image_fun_refine_1(ux,uy,Im1,Im2);
-    
+
     I1=double(Im1_shift);
     I2=double(Im2);
-               
-    % calculation of correction of the optical flow 
+
+    % calculation of correction of the optical flow
     [dux,duy,vor,dux_horn,duy_horn,error2]=OpticalFlowPhysics_fun(I1,I2,lambda_1,lambda_2);
 
     % refined optical flow
     ux_corr=uxI+dux;
     uy_corr=uyI+duy;
-    
-    
+
+
     k=k+1;
 end
 
@@ -172,38 +172,44 @@ uy(1:edge_width,:)=uy((edge_width+1):(2*edge_width),:);
 
 %% plot the fields of velocity magnitude, vorticity and the second invariant Q
  plots_set_2;
- 
- 
+
+
 % save Ux_vortexpair_hybrid_dt0p2.dat ux -ascii;
 % save Uy_vortexpair_hybrid_dt0p2.dat uy -ascii;
-%  
+%
 % save Ux_vortexpair_corr_dt0p2.dat ux0 -ascii;
 % save Uy_vortexpair_corr_dt0p2.dat uy0 -ascii;
-% %  
- 
+% %
+
 """
 import numpy as np
-import imageio
+import imageio.v2 as imageio
+try:
+    import cv2
+except ImportError:
+    print("OpenCV (cv2) is not installed. Some functionality may be limited.")
 from scipy.ndimage import gaussian_filter
 from scipy.ndimage import zoom
 import matplotlib.pyplot as plt
+import sys
+import os
+from typing import Tuple
 
+# Add parent directory to Python path to allow imports from sibling packages
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-def OpticalFlowPhysics_fun(I1, I2, lambda_1, lambda_2):
-    # Implement the OpticalFlowPhysics_fun function here
-    pass
+# Import from openopticalflow package
+from openopticalflow.correction_illumination import correction_illumination
+from openopticalflow.pre_processing_a import pre_processing_a
+from openopticalflow.OpticalFlowPhysics_fun import OpticalFlowPhysics_fun
+from openopticalflow.shift_image_fun_refine_1 import shift_image_fun_refine_1
 
-def plots_set_1():
-    # Implement the plots_set_1 function here
-    pass
-
-def plots_set_2():
-    # Implement the plots_set_2 function here
-    pass
+# Import PIV analysis functions
+from .pivAnalyzeImagePair import piv_analyze_image_pair
 
 # Load Images
-Im1 = imageio.imread('White_Oval_1.tif')
-Im2 = imageio.imread('White_Oval_2.tif')
+Im1 = imageio.imread('./images/White_Oval_1.tif')
+Im2 = imageio.imread('./images/White_Oval_2.tif')
 
 # Select region of interest
 index_region = 0
@@ -253,7 +259,7 @@ pivPar = {
     'iaStepX': [32, 8, 4],
     'ccMethod': 'fft'
 }
-pivData1 = pivAnalyzeImagePair(I1, I2, pivPar)
+pivData1 = piv_analyze_image_pair(I1, I2, pivPar)
 ux0 = pivData1['U']
 uy0 = pivData1['V']
 
@@ -288,12 +294,39 @@ ux[:edge_width, :] = ux[edge_width:2*edge_width, :]
 uy[:edge_width, :] = uy[edge_width:2*edge_width, :]
 
 # Plot the results
-plots_set_1()
-plots_set_2()
+# Create plots similar to plots_set_1 and plots_set_2
+plt.figure(figsize=(12, 10))
+
+# Plot original images
+plt.subplot(2, 2, 1)
+plt.imshow(I1_original, cmap='gray')
+plt.title('Original Image 1')
+plt.colorbar()
+
+plt.subplot(2, 2, 2)
+plt.imshow(I2_original, cmap='gray')
+plt.title('Original Image 2')
+plt.colorbar()
+
+# Plot velocity field
+plt.subplot(2, 2, 3)
+plt.quiver(ux, uy, scale=10, angles='xy', scale_units='xy')
+plt.title('Velocity Field')
+plt.axis('equal')
+
+# Plot velocity magnitude
+plt.subplot(2, 2, 4)
+velocity_magnitude = np.sqrt(ux**2 + uy**2)
+plt.imshow(velocity_magnitude, cmap='jet')
+plt.title('Velocity Magnitude')
+plt.colorbar()
+
+plt.tight_layout()
+plt.show()
 
 # Save results if needed
 # np.savetxt('Ux_vortexpair_hybrid_dt0p2.dat', ux)
 # np.savetxt('Uy_vortexpair_hybrid_dt0p2.dat', uy)
 # np.savetxt('Ux_vortexpair_corr_dt0p2.dat', ux0)
 # np.savetxt('Uy_vortexpair_corr_dt0p2.dat', uy0)
- 
+

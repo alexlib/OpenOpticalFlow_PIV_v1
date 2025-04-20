@@ -1,4 +1,5 @@
 import numpy as np
+from typing import Tuple
 
 def correction_illumination(Im1: np.ndarray, Im2: np.ndarray, window_shifting: np.ndarray, size_average: int) -> Tuple[np.ndarray, np.ndarray]:
     """

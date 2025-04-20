@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.ndimage import convolve
+from typing import Tuple
 
 def OpticalFlowPhysics_fun(I1: np.ndarray, I2: np.ndarray, lambda_1: float, lambda_2: float) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, float]:
     """

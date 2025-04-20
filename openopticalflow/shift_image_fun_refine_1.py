@@ -1,5 +1,13 @@
 import numpy as np
+import cv2
+import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
+from typing import Tuple
+
+# Import local modules
+from .correction_illumination import correction_illumination
+from .pre_processing_a import pre_processing_a
+from .OpticalFlowPhysics_fun import OpticalFlowPhysics_fun
 
 def shift_image_fun_refine_1(ux, uy, Im1, Im2):
     """

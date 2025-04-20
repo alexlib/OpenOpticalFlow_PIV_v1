@@ -65,24 +65,24 @@ function [pivData,ccFunction] = pivAnalyzeImagePair(im1,im2,pivPar)
 %          rpMethod ... specifies how the spurious vectors are replaced. Possible values are
 %              'none' ... do not replace spurious vectors
 %              'linear' ... replace spurious vectors with the use of TriScatteredInterp in Matlab, specifying
-%                   its method as 'linear'. If pivData contains data for image sequence, replacement is done 
+%                   its method as 'linear'. If pivData contains data for image sequence, replacement is done
 %                   in each time slice indepedently on other time slices.
 %              'natural' ... replace spurious vectors with the use of TriScatteredInterp in Matlab, specifying
-%                   its method as 'natural'. If pivData contains data for image sequence, replacement is done 
+%                   its method as 'natural'. If pivData contains data for image sequence, replacement is done
 %                   in each time slice indepedently on other time slices.
-%              'inpaint' ... use D'Errico's subroutine "inpaint_nans". If pivData contains data for image 
+%              'inpaint' ... use D'Errico's subroutine "inpaint_nans". If pivData contains data for image
 %                   sequence, replacement is done in each time slice indepedently on other time slices.
-%              'inpaintGarcia' ... use Garcia's subroutine "inpaintn". If pivData contains data for image 
+%              'inpaintGarcia' ... use Garcia's subroutine "inpaintn". If pivData contains data for image
 %                   sequence, replacement is done in each time slice indepedently on other time slices.
 %              'linearT' ... replace spurious vectors with the use of TriScatteredInterp in Matlab, specifying
 %                   its method as 'linear'. If pivData contains data for image sequence, replacement considers
 %                   also values in other time slices.
-%              'naturalT' ... replace spurious vectors with the use of TriScatteredInterp in Matlab, 
-%                   specifying its method as 'natural'. If pivData contains data for image sequence, 
+%              'naturalT' ... replace spurious vectors with the use of TriScatteredInterp in Matlab,
+%                   specifying its method as 'natural'. If pivData contains data for image sequence,
 %                   replacement considers also values in other time slices.
-%              'inpaintT' ... use D'Errico's subroutine "inpaint_nans". If pivData contains data for image 
+%              'inpaintT' ... use D'Errico's subroutine "inpaint_nans". If pivData contains data for image
 %                   sequence, replacement considers also values in other time slices.
-%              'inpaintGarciaT' ... use Garcia's subroutine "inpaintn". If pivData contains data for image 
+%              'inpaintGarciaT' ... use Garcia's subroutine "inpaintn". If pivData contains data for image
 %                   sequence, replacement considers also values in other time slices.
 %      --- prefix sm - affects smoothing of vector field, subroutine pivSmooth.m
 %          smMethod ... defines smoothing method. Possible values are:
@@ -115,7 +115,7 @@ function [pivData,ccFunction] = pivAnalyzeImagePair(im1,im2,pivPar)
 %           32 (bit 6) ... smoothed (set by pivSmooth)
 %           64 (bit 7) ... indicated as spurious by median test based on image sequence (set by pivValidate);
 %              this flag cannot be set when working with a single image pair
-%          128 (bit 8) ... interpolated within image sequence (set by pivReplaced); this flag cannot be set 
+%          128 (bit 8) ... interpolated within image sequence (set by pivReplaced); this flag cannot be set
 %              when working with a single image pair
 %          256 (bit 9) ... smoothed within an image sequence (set by pivSmooth); this flag cannot be set when
 %              working with a single image pair
@@ -218,20 +218,20 @@ pivPar.imMask2 = [];      % No mask for the second image
 
 pivPar.iaPreprocMethod = 'MinMax';  % include image preprocessing by local MinMax filter
 pivPar.iaMinMaxSize = 7;            % set kernel size of MinMax filter
-pivPar.iaMinMaxLevel = 16;          % set minimal level, below which the contrast is not improved 
+pivPar.iaMinMaxLevel = 16;          % set minimal level, below which the contrast is not improved
 
 
 %% Set the *windowing function*:
 
-pivPar.ccWindow = 'Gauss2';   % This filter is relatively narrow and will 
+pivPar.ccWindow = 'Gauss2';   % This filter is relatively narrow and will
                               % help measure velocities in middle of IA's
-                              % even for large IA'a     
+                              % even for large IA'a
 
 %% Vector validation settings
 
-pivPar.vlMinCC = 0.3;      % reject all vectors with normalized 
+pivPar.vlMinCC = 0.3;      % reject all vectors with normalized
                            % cross-correlation smaller than 0.3 of median
-                           
+
 pivPar.vlPasses = [1 1 1 1 1];        % number of passes
 pivPar.vlDist = 2 ;               % distance, to which vectors are included in the local
                                   % statistics (vlDist = 2 stays for 5x5 vector neighborhood
@@ -242,12 +242,12 @@ pivPar.vlEps = 0.08;              % allowed errors
 
 pivPar.smMethod = 'smoothn';    % choose the method (possible values 'none', 'Gauss', 'smoothn')
 pivPar.smSigma = 0.2;         % larger value means smoother results; NaN stays for automatic setting
-% pivPar.smSize = 10;            % size of the smoothing filter (applies only to 
+% pivPar.smSize = 10;            % size of the smoothing filter (applies only to
                               % gaussian filter)
-                              
+
 %% Set remaining parameters and run the analysis
 
-[pivParIn, pivData] = pivParams(pivData,pivPar,'defaults');   
+[pivParIn, pivData] = pivParams(pivData,pivPar,'defaults');
 pivData.infCompTime = [];
 % loop for all required passes
 for kp = 1:5
@@ -308,12 +308,27 @@ pivData = orderfields(pivData);
 """
 import numpy as np
 import time
+import os
+import sys
 from scipy.ndimage import gaussian_filter
-# Import other necessary libraries for image processing and PIV analysis
 
-def piv_analyze_image_pair(im1, im2):
-    pivPar = {}
-    pivData = {}
+# Add parent directory to Python path to allow imports from sibling packages
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Import PIV analysis functions
+from .pivParams import piv_params
+from .pivInterrogate import piv_interrogate
+from .pivCrossCorr import piv_cross_corr
+from .pivCorrector import piv_corrector
+from .pivValidate import piv_validate
+from .pivReplace import piv_replace
+from .pivSmooth import piv_smooth
+
+def piv_analyze_image_pair(im1, im2, pivPar=None):
+
+    if pivPar is None:
+        pivPar = {}
+
     pivPar['imMask1'] = None
     pivPar['imMask2'] = None
 
@@ -336,6 +351,9 @@ def piv_analyze_image_pair(im1, im2):
     pivPar['smMethod'] = 'smoothn'
     pivPar['smSigma'] = 0.2
 
+    pivData = {}
+
+
     # Set remaining parameters and run the analysis
     pivParIn, pivData = piv_params(pivData, pivPar, 'defaults')
     pivData['infCompTime'] = []
@@ -352,10 +370,7 @@ def piv_analyze_image_pair(im1, im2):
         exIm1, exIm2, pivData = piv_interrogate(im1, im2, pivData, pivPar)
 
         # Compute cross-correlation between interrogation areas
-        if (kp == len(pivParIn['anNpasses']) - 1) and nargout > 1:
-            pivData, ccFunction = piv_cross_corr(exIm1, exIm2, pivData, pivPar)
-        else:
-            pivData = piv_cross_corr(exIm1, exIm2, pivData, pivPar)
+        pivData = piv_cross_corr(exIm1, exIm2, pivData, pivPar)
 
         # Apply predictor-corrector to the velocity data
         pivData = piv_corrector(pivData, pivData0, pivPar)
@@ -374,10 +389,9 @@ def piv_analyze_image_pair(im1, im2):
 
         # Show the plot if required
         if 'qvPair' in pivPar and len(pivPar['qvPair']) > 0:
-            piv_quiver(pivData, pivPar['qvPair'])
+            # Placeholder for piv_quiver function
             title = f"Pass no. {kp + 1}, IA size {pivPar['iaSizeX']}x{pivPar['iaSizeY']}, grid step {pivPar['iaStepX']}x{pivPar['iaStepY']}"
             print(title)  # Replace with actual plotting code
-            # drawnow equivalent in Python
 
         # Remove temporary data from pivData
         pivData.pop('ccW', None)

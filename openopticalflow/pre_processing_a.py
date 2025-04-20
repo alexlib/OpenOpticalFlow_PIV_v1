@@ -1,5 +1,7 @@
 import numpy as np
+import cv2
 from scipy.ndimage import gaussian_filter
+from typing import Tuple
 
 def pre_processing_a(Im1: np.ndarray, Im2: np.ndarray, scale_im: float, size_filter: int) -> Tuple[np.ndarray, np.ndarray]:
     """
