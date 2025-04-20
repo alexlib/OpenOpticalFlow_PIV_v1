@@ -7,7 +7,7 @@ import os
 import re
 import numpy as np
 import matplotlib.pyplot as plt
-import imageio.v2 as imageio
+import imageio.v3 as imageio
 from glob import glob
 import sys
 import time
