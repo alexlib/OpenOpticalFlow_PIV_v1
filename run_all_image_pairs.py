@@ -7,18 +7,18 @@ import os
 import re
 import numpy as np
 import matplotlib.pyplot as plt
-import imageio.v3 as imageio
+import imageio.v2 as imageio
 from glob import glob
 import sys
 import time
 
-# Add the parent directory to the path so we can import the modules
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add the current directory to the path so we can import the modules
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Import the necessary modules
 from openopticalflow.OpticalFlowPhysics_fun import OpticalFlowPhysics_fun
 from openopticalflow.shift_image_fun_refine_1 import shift_image_fun_refine_1
-from pivAnalyzeImagePair import piv_analyze_image_pair
+from pivSuite.pivAnalyzeImagePair import piv_analyze_image_pair
 
 def find_image_pairs(image_dir):
     """
@@ -210,11 +210,11 @@ def main():
     """
     # Get the path to the images directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    repo_dir = os.path.dirname(script_dir)
-    image_dir = os.path.join(repo_dir, "images")
+    # Since the script is now in the root directory, we don't need to go up a level
+    image_dir = os.path.join(script_dir, "images")
 
     # Create output directory for results
-    output_dir = os.path.join(repo_dir, "results")
+    output_dir = os.path.join(script_dir, "results")
     os.makedirs(output_dir, exist_ok=True)
 
     # Find all image pairs

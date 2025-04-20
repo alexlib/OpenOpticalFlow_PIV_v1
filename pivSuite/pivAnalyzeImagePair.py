@@ -315,13 +315,13 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import PIV analysis functions
-from pivParams import piv_params
-from pivInterrogate import piv_interrogate
-from pivCrossCorr import piv_cross_corr
-from pivCorrector import piv_corrector
-from pivValidate import piv_validate
-from pivReplace import piv_replace
-from pivSmooth import piv_smooth
+from .pivParams import piv_params
+from .pivInterrogate import piv_interrogate
+from .pivCrossCorr import piv_cross_corr
+from .pivCorrector import piv_corrector
+from .pivValidate import piv_validate
+from .pivReplace import piv_replace
+from .pivSmooth import piv_smooth
 
 def piv_analyze_image_pair(im1, im2, pivPar=None):
 

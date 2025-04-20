@@ -1,8 +1,8 @@
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 from scipy.ndimage import gaussian_filter
-from piv_parameters import PIVParameters
-from numpy_utils import safe_mean
+from .piv_parameters import PIVParameters
+from pivSuite.numpy_utils import safe_mean
 
 def inpaint_nans(arr):
     # Simple inpainting function to replace NaNs with the mean of the array

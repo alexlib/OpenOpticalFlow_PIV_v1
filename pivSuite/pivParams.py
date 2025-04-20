@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Dict, Any, Tuple, List, Union
-from piv_parameters import PIVParameters
+from .piv_parameters import PIVParameters
 
 def piv_params(piv_data: Dict[str, Any], piv_par_in: Union[Dict[str, Any], PIVParameters, Tuple], action: str, *args: Any) -> Tuple[Union[Dict[str, Any], PIVParameters], Dict[str, Any]]:
     """

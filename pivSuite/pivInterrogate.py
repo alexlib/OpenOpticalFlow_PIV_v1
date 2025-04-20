@@ -5,7 +5,7 @@ import os
 import re
 from imageio.v2 import imread
 from scipy.interpolate import griddata
-from piv_parameters import PIVParameters
+from .piv_parameters import PIVParameters
 
 def inpaint_nans(array):
     """Simple function to replace NaNs with interpolated values"""

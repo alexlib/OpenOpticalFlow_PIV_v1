@@ -2,7 +2,7 @@
 # Python implementation of the MATLAB PIVsuite by Jiri Vejrazka
 
 import numpy as np
-from piv_parameters import PIVParameters
+from .piv_parameters import PIVParameters
 
 def piv_cross_corr(exIm1, exIm2, pivData, pivPar):
     """
