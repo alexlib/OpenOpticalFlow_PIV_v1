@@ -6,6 +6,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from inpaint_nans import inpaint_nans
 from inpaint_nans3 import inpaint_nans3
 from inpaintn import inpaintn
+from .piv_parameters import PIVParameters
 
 def piv_replace(piv_data, piv_par):
     """
@@ -33,7 +34,11 @@ def piv_replace(piv_data, piv_par):
     V = piv_data['V'].astype(np.float64)
     status = piv_data['Status']
 
-    method = piv_par['rpMethod']
+    # Convert piv_par to PIVParameters if it's not already
+    piv_par = PIVParameters.from_tuple_or_dict(piv_par)
+
+    # Extract parameters from piv_par
+    method = piv_par.rpMethod
 
     if U.shape[2] == 1 and method.lower() in ['lineart', 'naturalt', 'inpaintt']:
         method = method[:-1]

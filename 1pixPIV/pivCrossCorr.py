@@ -2,6 +2,7 @@
 # Python implementation of the MATLAB PIVsuite by Jiri Vejrazka
 
 import numpy as np
+from piv_parameters import PIVParameters
 
 def piv_cross_corr(exIm1, exIm2, pivData, pivPar):
     """
@@ -22,49 +23,18 @@ def piv_cross_corr(exIm1, exIm2, pivData, pivPar):
     ccPeak = np.copy(U)                  # will contain peak levels
     ccPeakSecondary = np.copy(U)         # will contain level of secondary peaks
 
+    # Convert pivPar to PIVParameters if it's not already
+    pivPar = PIVParameters.from_tuple_or_dict(pivPar)
+
     # Extract parameters from pivPar
-    # Handle different types of pivPar
-    if isinstance(pivPar, dict):
-        iaSizeX = pivPar.get('iaSizeX', 32)
-        iaSizeY = pivPar.get('iaSizeY', 32)
-        ccRemoveIAMean = pivPar.get('ccRemoveIAMean', 1)
-        ccMaxDisplacement = pivPar.get('ccMaxDisplacement', 0.9)
-        ccWindow = pivPar.get('ccWindow', 'uniform')
-        ccCorrectWindowBias = pivPar.get('ccCorrectWindowBias', False)
-        ccMethod = pivPar.get('ccMethod', 'fft')
-        ccMaxDCNdist = pivPar.get('ccMaxDCNdist', 1)
-    elif isinstance(pivPar, tuple):
-        # If pivPar is a tuple, it might be the result of piv_params
-        # In this case, the first element should be the parameters
-        if len(pivPar) > 0 and isinstance(pivPar[0], dict):
-            iaSizeX = pivPar[0].get('iaSizeX', 32)
-            iaSizeY = pivPar[0].get('iaSizeY', 32)
-            ccRemoveIAMean = pivPar[0].get('ccRemoveIAMean', 1)
-            ccMaxDisplacement = pivPar[0].get('ccMaxDisplacement', 0.9)
-            ccWindow = pivPar[0].get('ccWindow', 'uniform')
-            ccCorrectWindowBias = pivPar[0].get('ccCorrectWindowBias', False)
-            ccMethod = pivPar[0].get('ccMethod', 'fft')
-            ccMaxDCNdist = pivPar[0].get('ccMaxDCNdist', 1)
-        else:
-            # Default values
-            iaSizeX = 32
-            iaSizeY = 32
-            ccRemoveIAMean = 1
-            ccMaxDisplacement = 0.9
-            ccWindow = 'uniform'
-            ccCorrectWindowBias = False
-            ccMethod = 'fft'
-            ccMaxDCNdist = 1
-    else:
-        # Default values
-        iaSizeX = 32
-        iaSizeY = 32
-        ccRemoveIAMean = 1
-        ccMaxDisplacement = 0.9
-        ccWindow = 'uniform'
-        ccCorrectWindowBias = False
-        ccMethod = 'fft'
-        ccMaxDCNdist = 1
+    iaSizeX = pivPar.get_parameter('iaSizeX')
+    iaSizeY = pivPar.get_parameter('iaSizeY')
+    ccRemoveIAMean = pivPar.ccRemoveIAMean
+    ccMaxDisplacement = pivPar.ccMaxDisplacement
+    ccWindow = pivPar.ccWindow
+    ccCorrectWindowBias = pivPar.ccCorrectWindowBias
+    ccMethod = pivPar.get_parameter('ccMethod')
+    ccMaxDCNdist = pivPar.ccMaxDCNdist
 
     iaNX = pivData['X'].shape[1]
     iaNY = pivData['X'].shape[0]
@@ -88,10 +58,12 @@ def piv_cross_corr(exIm1, exIm2, pivData, pivPar):
     KsiX = 2 * EtaX
     KsiY = 2 * EtaY
 
-    if ccWindow.lower() == 'uniform':
+    # Select window function
+    window_type = ccWindow.lower()
+    if window_type == 'uniform':
         W = np.ones((iaSizeY, iaSizeX))
         F = (1 - np.abs(KsiX)) * (1 - np.abs(KsiY))
-    elif ccWindow.lower() == 'parzen':
+    elif window_type == 'parzen':
         W = (1 - 2 * np.abs(EtaX)) * (1 - 2 * np.abs(EtaY))
         auxFx = np.full_like(auxX, np.nan)
         auxFy = np.full_like(auxX, np.nan)
@@ -102,39 +74,39 @@ def piv_cross_corr(exIm1, exIm2, pivData, pivPar):
         auxFy[auxOK] = 1 - 6 * KsiY[auxOK]**2 + 6 * np.abs(KsiY[auxOK])**3
         auxFy[~auxOK] = 2 - 6 * np.abs(KsiY[~auxOK]) + 6 * KsiY[~auxOK]**2 - 2 * np.abs(KsiY[~auxOK])**3
         F = auxFx * auxFy
-    elif ccWindow.lower() == 'hanning':
+    elif window_type == 'hanning':
         W = (0.5 + 0.5 * np.cos(2 * np.pi * EtaX)) * (0.5 + 0.5 * np.cos(2 * np.pi * EtaY))
         F = (2/3 * (1 - np.abs(KsiX)) * (1 + 0.5 * np.cos(2 * np.pi * KsiX)) + 0.5 / np.pi * np.sin(2 * np.pi * np.abs(KsiX))) * \
             (2/3 * (1 - np.abs(KsiY)) * (1 + 0.5 * np.cos(2 * np.pi * KsiY)) + 0.5 / np.pi * np.sin(2 * np.pi * np.abs(KsiY)))
-    elif ccWindow.lower() == 'welch':
+    elif window_type == 'welch':
         W = (1 - (2 * EtaX)**2) * (1 - (2 * EtaY)**2)
         F = (1 - 5 * KsiX**2 + 5 * np.abs(KsiX)**3 - np.abs(KsiX)**5) * \
             (1 - 5 * KsiY**2 + 5 * np.abs(KsiY)**3 - np.abs(KsiY)**5)
-    elif ccWindow.lower() == 'gauss':
+    elif window_type == 'gauss':
         W = np.exp(-8 * EtaX**2) * np.exp(-8 * EtaY**2)
         F = np.exp(-4 * KsiX**2) * np.exp(-4 * KsiY**2)
-    elif ccWindow.lower() == 'gauss1':
+    elif window_type == 'gauss1':
         W = np.exp(-8 * (EtaX**2 + EtaY**2)) - np.exp(-2)
         W[W < 0] = 0
         W /= np.max(W)
         F = np.nan
-    elif ccWindow.lower() == 'gauss2':
+    elif window_type == 'gauss2':
         W = np.exp(-16 * (EtaX**2 + EtaY**2)) - np.exp(-4)
         W[W < 0] = 0
         W /= np.max(W)
         F = np.nan
-    elif ccWindow.lower() == 'gauss0.5':
+    elif window_type == 'gauss0.5':
         W = np.exp(-4 * (EtaX**2 + EtaY**2)) - np.exp(-1)
         W[W < 0] = 0
         W /= np.max(W)
         F = np.nan
-    elif ccWindow.lower() == 'nogueira':
+    elif window_type == 'nogueira':
         W = 9 * (1 - 4 * np.abs(EtaX) + 4 * EtaX**2) * (1 - 4 * np.abs(EtaY) + 4 * EtaY**2)
         F = np.nan
-    elif ccWindow.lower() == 'hanning2':
+    elif window_type == 'hanning2':
         W = (0.5 + 0.5 * np.cos(2 * np.pi * EtaX))**2 * (0.5 + 0.5 * np.cos(2 * np.pi * EtaY))**2
         F = np.nan
-    elif ccWindow.lower() == 'hanning4':
+    elif window_type == 'hanning4':
         W = (0.5 + 0.5 * np.cos(2 * np.pi * EtaX))**4 * (0.5 + 0.5 * np.cos(2 * np.pi * EtaY))**4
         F = np.nan
 
@@ -157,12 +129,14 @@ def piv_cross_corr(exIm1, exIm2, pivData, pivPar):
                 imIA2 *= W
                 auxStd1 = stdfast(imIA1)
                 auxStd2 = stdfast(imIA2)
-                if ccMethod.lower() == 'fft':
+                # Get the cross-correlation method
+                cc_method = ccMethod.lower() if isinstance(ccMethod, str) else 'fft'
+                if cc_method == 'fft':
                     cc = np.fft.fftshift(np.real(np.fft.ifft2(np.conj(np.fft.fft2(imIA1)) * np.fft.fft2(imIA2)))) / (auxStd1 * auxStd2) / (iaSizeX * iaSizeY)
                     auxPeak = np.max(cc)
                     Upx = np.argmax(np.max(cc, axis=0))
                     Vpx = np.argmax(cc[:, Upx])
-                elif ccMethod.lower() == 'dcn':
+                elif cc_method == 'dcn':
                     cc = dcn(imIA1, imIA2, ccMaxDCNdist) / (auxStd1 * auxStd2) / (iaSizeX * iaSizeY)
                     auxPeak = np.max(cc)
                     Upx = np.argmax(np.max(cc, axis=0))

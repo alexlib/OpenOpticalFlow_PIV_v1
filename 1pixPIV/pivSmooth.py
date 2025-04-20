@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.ndimage import gaussian_filter
 from smoothn_fixed import smoothn
+from .piv_parameters import PIVParameters
 
 def piv_smooth(piv_data, piv_par):
     """
@@ -40,13 +41,16 @@ def piv_smooth(piv_data, piv_par):
     Uin = piv_data['U'].astype(np.float64)
     Vin = piv_data['V'].astype(np.float64)
     status = piv_data['Status']
+    # Convert piv_par to PIVParameters if it's not already
+    piv_par = PIVParameters.from_tuple_or_dict(piv_par)
+
     if Uin.ndim > 2:
-        method = piv_par['smMethodSeq']
-        sigma = piv_par['smSigmaSeq']
+        method = piv_par.smMethodSeq
+        sigma = piv_par.smSigmaSeq
         bit = 9
     else:
-        method = piv_par['smMethod']
-        sigma = piv_par['smSigma']
+        method = piv_par.get_parameter('smMethod')
+        sigma = piv_par.smSigma
         bit = 6
 
     if method.lower() == 'none':

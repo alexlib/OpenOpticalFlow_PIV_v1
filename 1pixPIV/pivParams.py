@@ -1,7 +1,8 @@
 import numpy as np
-from typing import Dict, Any, Tuple, List
+from typing import Dict, Any, Tuple, List, Union
+from piv_parameters import PIVParameters
 
-def piv_params(piv_data: Dict[str, Any], piv_par_in: Dict[str, Any], action: str, *args: Any) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+def piv_params(piv_data: Dict[str, Any], piv_par_in: Union[Dict[str, Any], PIVParameters, Tuple], action: str, *args: Any) -> Tuple[Union[Dict[str, Any], PIVParameters], Dict[str, Any]]:
     """
     Adjust content of pivPar variable, which controls settings of PIV analysis.
 
@@ -14,245 +15,209 @@ def piv_params(piv_data: Dict[str, Any], piv_par_in: Dict[str, Any], action: str
     Returns:
         Tuple[Dict[str, Any], Dict[str, Any]]: Adjusted pivPar and pivData.
     """
-    piv_par = piv_par_in.copy()
+    # Convert input to PIVParameters if it's not already
+    if isinstance(piv_par_in, PIVParameters):
+        piv_par = piv_par_in
+    elif isinstance(piv_par_in, dict):
+        piv_par = PIVParameters.from_dict(piv_par_in)
+    elif isinstance(piv_par_in, tuple) and len(piv_par_in) > 0:
+        if isinstance(piv_par_in[0], dict):
+            piv_par = PIVParameters.from_dict(piv_par_in[0])
+        elif isinstance(piv_par_in[0], PIVParameters):
+            piv_par = piv_par_in[0]
+        else:
+            piv_par = PIVParameters()
+    else:
+        piv_par = PIVParameters()
 
     if action.lower() == 'defaults':
-        # Set default values for unspecified fields in pivParIn
-        if 'anNpasses' not in piv_par:
-            piv_par['anNpasses'] = 4
-        if 'iaSizeX' not in piv_par:
-            piv_par['iaSizeX'] = [64, 32, 16, 16]
-        if 'iaSizeY' not in piv_par:
-            piv_par['iaSizeY'] = [64, 32, 16, 16]
-        if 'iaStepX' not in piv_par:
-            piv_par['iaStepX'] = [s // 2 for s in piv_par['iaSizeX']]
-        if 'iaStepY' not in piv_par:
-            piv_par['iaStepY'] = [s // 2 for s in piv_par['iaSizeY']]
-
-        piv_par = chkfield(piv_par, 'iaMethod', 'defspline')
-        piv_par = chkfield(piv_par, 'imMask1', [])
-        piv_par = chkfield(piv_par, 'imMask2', [])
-        piv_par = chkfield(piv_par, 'iaImageToDeform', 'image1')
-        piv_par = chkfield(piv_par, 'iaImageInterpolationMethod', 'spline')
-        piv_par = chkfield(piv_par, 'iaPreprocMethod', 'none')
-        piv_par = chkfield(piv_par, 'ccRemoveIAMean', 1)
-        piv_par = chkfield(piv_par, 'ccMaxDisplacement', 0.9)
-        piv_par = chkfield(piv_par, 'ccWindow', 'Welch')
-        piv_par = chkfield(piv_par, 'ccCorrectWindowBias', False)
-        piv_par = chkfield(piv_par, 'ccMaxDCNdist', 1)
-        piv_par = chkfield(piv_par, 'crAmount', 0)
-        piv_par = chkfield(piv_par, 'vlMinCC', 0.3)
-        piv_par = chkfield(piv_par, 'vlTresh', 2)
-        piv_par = chkfield(piv_par, 'vlEps', 0.1)
-        piv_par = chkfield(piv_par, 'vlPasses', [2, 1, 1])
-        piv_par = chkfield(piv_par, 'vlDist', [1] + [2] * (piv_par['anNpasses'] - 1))
-        piv_par = chkfield(piv_par, 'smMethod', 'smoothn')
-        piv_par = chkfield(piv_par, 'smSigma', np.nan)
-        piv_par = chkfield(piv_par, 'rpMethod', 'inpaint')
-        piv_par = chkfield(piv_par, 'qvPair', {})
-
-        if piv_par['smMethod'] == 'gauss':
-            piv_par = chkfield(piv_par, 'smSize', 5)
-
-        piv_par['ccMethod'] = ['fft'] + ['dcn'] * (piv_par['anNpasses'] - 1)
-        piv_par['vlPasses'] = [2] + [1] * (piv_par['anNpasses'] - 1)
-        piv_par['vlDist'] = [1] + [2] * (piv_par['anNpasses'] - 1)
-
-        if piv_par['iaPreprocMethod'] == 'MinMax':
-            piv_par = chkfield(piv_par, 'iaMinMaxSize', 7)
-            piv_par = chkfield(piv_par, 'iaMinMaxLevel', 16)
-
-        piv_par = order_fields(piv_par)
+        # The defaults are already set in the PIVParameters class
+        # Just ensure the post_init has been called
+        if piv_par.iaPreprocMethod == 'MinMax':
+            if not hasattr(piv_par, 'iaMinMaxSize') or piv_par.iaMinMaxSize is None:
+                piv_par.iaMinMaxSize = 7
+            if not hasattr(piv_par, 'iaMinMaxLevel') or piv_par.iaMinMaxLevel is None:
+                piv_par.iaMinMaxLevel = 16
 
     elif action.lower() == 'defaultsseq':
-        piv_par = chkfield(piv_par, 'vlDistTSeq', 0)
-        piv_par = chkfield(piv_par, 'vlTreshSeq', 2)
-        piv_par = chkfield(piv_par, 'vlEpsSeq', 0.1)
-        piv_par = chkfield(piv_par, 'vlPassesSeq', 1)
-        piv_par = chkfield(piv_par, 'vlDistSeq', 2)
-        piv_par = chkfield(piv_par, 'smMethodSeq', 'none')
-        piv_par = chkfield(piv_par, 'smSigmaSeq', 1)
-        piv_par = chkfield(piv_par, 'seqMaxPairs', np.inf)
-        piv_par = chkfield(piv_par, 'seqFirstIm', 1)
-        piv_par = chkfield(piv_par, 'seqDiff', 1)
-        piv_par = chkfield(piv_par, 'seqPairInterval', 1)
-        piv_par = chkfield(piv_par, 'anOnDrive', False)
-        piv_par = chkfield(piv_par, 'anTargetPath', '')
-        piv_par = chkfield(piv_par, 'anForceProcessing', False)
-        piv_par = chkfield(piv_par, 'anVelocityEst', 'previous')
-        piv_par = chkfield(piv_par, 'anPairsOnly', False)
-        piv_par = chkfield(piv_par, 'anStatsOnly', False)
+        # These defaults are already set in the PIVParameters class
+        # Just ensure we have the right ccMethod for velocity estimation
+        if piv_par.anVelocityEst in ['previous', 'previousSmooth']:
+            piv_par.ccMethod = 'dcn'
 
-        if piv_par['anVelocityEst'] in ['previous', 'previousSmooth']:
-            piv_par = chkfield(piv_par, 'ccMethod', 'dcn')
-
+        # Call defaults to ensure everything is properly initialized
         piv_par, piv_data = piv_params(piv_data, piv_par, 'Defaults')
-        piv_par = order_fields(piv_par)
 
     elif action.lower() == 'defaults1px':
-        piv_par, piv_data = piv_params(piv_data, piv_par_in, 'Defaults')
+        # First get the defaults
+        piv_par, piv_data = piv_params(piv_data, piv_par, 'Defaults')
 
-        piv_par = chkfield(piv_par, 'spDeltaXNeg', 8)
-        piv_par = chkfield(piv_par, 'spDeltaXPos', 8)
-        piv_par = chkfield(piv_par, 'spDeltaYNeg', 8)
-        piv_par = chkfield(piv_par, 'spDeltaYPos', 8)
-        piv_par = chkfield(piv_par, 'spDeltaAutoCorr', 3)
-        piv_par = chkfield(piv_par, 'spBindX', 1)
-        piv_par = chkfield(piv_par, 'spBindY', 1)
-        piv_par = chkfield(piv_par, 'spStepX', min(piv_par['spBindX'], piv_par['spBindY']))
-        piv_par = chkfield(piv_par, 'spStepY', min(piv_par['spBindX'], piv_par['spBindY']))
-        piv_par = chkfield(piv_par, 'spAvgSmooth', 3)
-        piv_par = chkfield(piv_par, 'spRmsSmooth', 5)
-        piv_par = chkfield(piv_par, 'spACsource', 'both')
-        piv_par = chkfield(piv_par, 'spOnDrive', True)
-        piv_par = chkfield(piv_par, 'spForceProcessing', False)
-        piv_par = chkfield(piv_par, 'spSaveInterval', 50)
-        piv_par = chkfield(piv_par, 'spGFitNPasses', 1)
-        piv_par = chkfield(piv_par, 'spGFitMaxIter', 10000)
+        # Set single-pixel specific parameters
+        # These would ideally be in the PIVParameters class,
+        # but for now we'll set them here for backward compatibility
+        if not hasattr(piv_par, 'spDeltaXNeg') or piv_par.spDeltaXNeg is None:
+            piv_par.spDeltaXNeg = 8
+        if not hasattr(piv_par, 'spDeltaXPos') or piv_par.spDeltaXPos is None:
+            piv_par.spDeltaXPos = 8
+        if not hasattr(piv_par, 'spDeltaYNeg') or piv_par.spDeltaYNeg is None:
+            piv_par.spDeltaYNeg = 8
+        if not hasattr(piv_par, 'spDeltaYPos') or piv_par.spDeltaYPos is None:
+            piv_par.spDeltaYPos = 8
+        if not hasattr(piv_par, 'spDeltaAutoCorr') or piv_par.spDeltaAutoCorr is None:
+            piv_par.spDeltaAutoCorr = 3
+        if not hasattr(piv_par, 'spBindX') or piv_par.spBindX is None:
+            piv_par.spBindX = 1
+        if not hasattr(piv_par, 'spBindY') or piv_par.spBindY is None:
+            piv_par.spBindY = 1
+        if not hasattr(piv_par, 'spStepX') or piv_par.spStepX is None:
+            piv_par.spStepX = min(piv_par.spBindX, piv_par.spBindY)
+        if not hasattr(piv_par, 'spStepY') or piv_par.spStepY is None:
+            piv_par.spStepY = min(piv_par.spBindX, piv_par.spBindY)
+        if not hasattr(piv_par, 'spAvgSmooth') or piv_par.spAvgSmooth is None:
+            piv_par.spAvgSmooth = 3
+        if not hasattr(piv_par, 'spRmsSmooth') or piv_par.spRmsSmooth is None:
+            piv_par.spRmsSmooth = 5
+        if not hasattr(piv_par, 'spACsource') or piv_par.spACsource is None:
+            piv_par.spACsource = 'both'
+        if not hasattr(piv_par, 'spOnDrive') or piv_par.spOnDrive is None:
+            piv_par.spOnDrive = True
+        if not hasattr(piv_par, 'spForceProcessing') or piv_par.spForceProcessing is None:
+            piv_par.spForceProcessing = False
+        if not hasattr(piv_par, 'spSaveInterval') or piv_par.spSaveInterval is None:
+            piv_par.spSaveInterval = 50
+        if not hasattr(piv_par, 'spGFitNPasses') or piv_par.spGFitNPasses is None:
+            piv_par.spGFitNPasses = 1
+        if not hasattr(piv_par, 'spGFitMaxIter') or piv_par.spGFitMaxIter is None:
+            piv_par.spGFitMaxIter = 10000
 
-        piv_par = chkfield(piv_par, 'spGFitMinCc', 0.05 * np.ones(piv_par['spGFitNPasses']))
-        piv_par = chkfield(piv_par, 'spGFitMaxDist', 5 * np.ones(piv_par['spGFitNPasses']))
-        piv_par = chkfield(piv_par, 'spVlDist', 2 * np.ones(piv_par['spGFitNPasses']))
-        piv_par = chkfield(piv_par, 'spVlPasses', 2 * np.ones(piv_par['spGFitNPasses']))
-        piv_par = chkfield(piv_par, 'spVlTresh', 1.8 * np.ones(piv_par['spGFitNPasses']))
-        piv_par = chkfield(piv_par, 'spVlEps', 0.05 * np.ones(piv_par['spGFitNPasses']))
-        piv_par = chkfield(piv_par, 'spSmSigma', np.append(2 * np.ones(piv_par['spGFitNPasses'] - 1), np.nan))
-
-        piv_par = chkfield(piv_par, 'seqFirstIm', 1)
-        piv_par = chkfield(piv_par, 'seqDiff', 1)
-        piv_par = chkfield(piv_par, 'seqPairInterval', 1)
-
-        piv_par = order_fields(piv_par)
+        # Arrays based on number of passes
+        if not hasattr(piv_par, 'spGFitMinCc') or piv_par.spGFitMinCc is None:
+            piv_par.spGFitMinCc = 0.05 * np.ones(piv_par.spGFitNPasses)
+        if not hasattr(piv_par, 'spGFitMaxDist') or piv_par.spGFitMaxDist is None:
+            piv_par.spGFitMaxDist = 5 * np.ones(piv_par.spGFitNPasses)
+        if not hasattr(piv_par, 'spVlDist') or piv_par.spVlDist is None:
+            piv_par.spVlDist = 2 * np.ones(piv_par.spGFitNPasses)
+        if not hasattr(piv_par, 'spVlPasses') or piv_par.spVlPasses is None:
+            piv_par.spVlPasses = 2 * np.ones(piv_par.spGFitNPasses)
+        if not hasattr(piv_par, 'spVlTresh') or piv_par.spVlTresh is None:
+            piv_par.spVlTresh = 1.8 * np.ones(piv_par.spGFitNPasses)
+        if not hasattr(piv_par, 'spVlEps') or piv_par.spVlEps is None:
+            piv_par.spVlEps = 0.05 * np.ones(piv_par.spGFitNPasses)
+        if not hasattr(piv_par, 'spSmSigma') or piv_par.spSmSigma is None:
+            piv_par.spSmSigma = np.append(2 * np.ones(piv_par.spGFitNPasses - 1), np.nan)
 
     elif action.lower() == 'singlepass':
         kpass = args[0]
-        piv_par = {}
+        # Use the get_single_pass_params method to extract parameters for a specific pass
+        piv_par = piv_par.get_single_pass_params(kpass)
 
-        piv_par = copy_value(piv_par, piv_par_in, 'anNpasses', kpass, 0)
-        piv_par = copy_value(piv_par, piv_par_in, 'iaSizeX', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'iaSizeY', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'iaStepX', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'iaStepY', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'imMask1', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'imMask2', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'iaMethod', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'iaImageToDeform', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'iaImageInterpolationMethod', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'iaPreprocMethod', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'iaMinMaxSize', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'iaMinMaxLevel', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'ccRemoveIAMean', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'ccMaxDisplacement', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'ccWindow', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'ccCorrectWindowBias', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'ccMethod', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'ccMaxDCNdist', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'crAmount', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'vlMinCC', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'vlTresh', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'vlEps', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'vlDist', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'vlPasses', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'vlDistTSeq', kpass, 1)
-        piv_par = copy_value(piv_par, piv_par_in, 'vlTreshSeq', kpass, 1)
-        piv_par = copy_value(piv_par, piv_par_in, 'vlEpsSeq', kpass, 1)
-        piv_par = copy_value(piv_par, piv_par_in, 'vlDistSeq', kpass, 1)
-        piv_par = copy_value(piv_par, piv_par_in, 'vlPassesSeq', kpass, 1)
-        piv_par = copy_value(piv_par, piv_par_in, 'rpMethod', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'smMethod', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'smSigma', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'smSize', kpass, 2)
-        piv_par = copy_value(piv_par, piv_par_in, 'smMethodSeq', kpass, 1)
-        piv_par = copy_value(piv_par, piv_par_in, 'smSigmaSeq', kpass, 1)
-        piv_par = copy_value(piv_par, piv_par_in, 'qvPair', kpass, 1)
-
-        piv_par = order_fields(piv_par)
-
+        # Store parameters in pivData if needed
         if len(args) > 1:
-            piv_data['pivPar'] = [{} for _ in range(piv_par['anNpasses'])]
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'iaSizeX', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'iaSizeY', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'iaStepX', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'iaStepY', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'ccRemoveIAMean', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'ccMaxDisplacement', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'iaMethod', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'iaImageToDeform', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'iaImageInterpolationMethod', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'rpMethod', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'smMethod', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'smSigma', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'smSize', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'smMethodSeq', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'smSigmaSeq', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'vlTresh', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'vlEps', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'vlDist', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'vlDistTSeq', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'vlPasses', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'vlTreshSeq', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'vlEpsSeq', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'vlDistSeq', kpass, 1)
-            piv_data['pivPar'][kpass] = copy_value(piv_data['pivPar'][kpass], piv_par, 'vlPassesSeq', kpass, 1)
+            if 'pivPar' not in piv_data:
+                piv_data['pivPar'] = [PIVParameters() for _ in range(piv_par.anNpasses)]
+            piv_data['pivPar'][kpass] = piv_par
 
     elif action.lower() == 'defaultsjobmanagement':
-        piv_par = chkfield(piv_par, 'jmParallelJobs', 4)
-        piv_par = chkfield(piv_par, 'jmLockExpirationTime', 600)
-        piv_par = order_fields(piv_par)
+        # Set job management parameters
+        if not hasattr(piv_par, 'jmParallelJobs') or piv_par.jmParallelJobs is None:
+            piv_par.jmParallelJobs = 4
+        if not hasattr(piv_par, 'jmLockExpirationTime') or piv_par.jmLockExpirationTime is None:
+            piv_par.jmLockExpirationTime = 600
 
     piv_par = order_fields(piv_par)
     return piv_par, piv_data
 
-def chkfield(piv_par: Dict[str, Any], field_name: str, default_val: Any) -> Dict[str, Any]:
+def chkfield(piv_par: Union[Dict[str, Any], PIVParameters], field_name: str, default_val: Any) -> Union[Dict[str, Any], PIVParameters]:
     """
     Check if a field exists in pivPar; if not, set it to the default value.
 
     Args:
-        piv_par (Dict[str, Any]): The parameter dictionary.
+        piv_par (Union[Dict[str, Any], PIVParameters]): The parameter object.
         field_name (str): The name of the field to check.
         default_val (Any): The default value to set if the field does not exist.
 
     Returns:
-        Dict[str, Any]: The updated parameter dictionary.
+        Union[Dict[str, Any], PIVParameters]: The updated parameter object.
     """
-    if field_name not in piv_par:
-        piv_par[field_name] = default_val
+    if isinstance(piv_par, dict):
+        if field_name not in piv_par:
+            piv_par[field_name] = default_val
+    else:  # PIVParameters object
+        if not hasattr(piv_par, field_name) or getattr(piv_par, field_name) is None:
+            setattr(piv_par, field_name, default_val)
     return piv_par
 
-def copy_value(piv_par: Dict[str, Any], piv_par_in: Dict[str, Any], field_name: str, k: int, mode: int) -> Dict[str, Any]:
+def copy_value(piv_par: Union[Dict[str, Any], PIVParameters],
+               piv_par_in: Union[Dict[str, Any], PIVParameters, Tuple],
+               field_name: str, k: int, mode: int) -> Union[Dict[str, Any], PIVParameters]:
     """
     Copy a field value from pivParIn to pivPar based on the specified mode.
 
     Args:
-        piv_par (Dict[str, Any]): The target parameter dictionary.
-        piv_par_in (Dict[str, Any]): The source parameter dictionary.
+        piv_par (Union[Dict[str, Any], PIVParameters]): The target parameter object.
+        piv_par_in (Union[Dict[str, Any], PIVParameters, Tuple]): The source parameter object.
         field_name (str): The name of the field to copy.
         k (int): The index for array or list fields.
         mode (int): The copying mode (0: do nothing, 1: copy entire field, 2: copy k-th element).
 
     Returns:
-        Dict[str, Any]: The updated parameter dictionary.
+        Union[Dict[str, Any], PIVParameters]: The updated parameter object.
     """
-    if mode == 1 and field_name in piv_par_in:
-        piv_par[field_name] = piv_par_in[field_name]
-    elif mode == 2 and field_name in piv_par_in:
-        value = piv_par_in[field_name]
-        if isinstance(value, (list, np.ndarray)) and len(value) > k:
-            piv_par[field_name] = value[k]
-        elif isinstance(value, (list, np.ndarray)):
-            piv_par[field_name] = value[-1]
-        else:
+    # Handle different input types
+    if isinstance(piv_par_in, tuple) and len(piv_par_in) > 0:
+        if isinstance(piv_par_in[0], dict):
+            piv_par_in = piv_par_in[0]
+        elif isinstance(piv_par_in[0], PIVParameters):
+            piv_par_in = piv_par_in[0]
+
+    # Check if field exists in source
+    field_exists = False
+    if isinstance(piv_par_in, dict):
+        field_exists = field_name in piv_par_in
+        if field_exists:
+            value = piv_par_in[field_name]
+    else:  # PIVParameters object
+        field_exists = hasattr(piv_par_in, field_name)
+        if field_exists:
+            value = getattr(piv_par_in, field_name)
+
+    if not field_exists:
+        return piv_par
+
+    # Copy value based on mode
+    if mode == 1:  # Copy entire field
+        if isinstance(piv_par, dict):
             piv_par[field_name] = value
+        else:  # PIVParameters object
+            setattr(piv_par, field_name, value)
+    elif mode == 2:  # Copy k-th element
+        if isinstance(value, (list, np.ndarray)):
+            if len(value) > k:
+                result_value = value[k]
+            elif len(value) > 0:
+                result_value = value[-1]
+            else:
+                return piv_par
+        else:
+            result_value = value
+
+        if isinstance(piv_par, dict):
+            piv_par[field_name] = result_value
+        else:  # PIVParameters object
+            setattr(piv_par, field_name, result_value)
+
     return piv_par
 
-def order_fields(piv_par: Dict[str, Any]) -> Dict[str, Any]:
+def order_fields(piv_par: Union[Dict[str, Any], PIVParameters]) -> Union[Dict[str, Any], PIVParameters]:
     """
-    Order the fields in a dictionary alphabetically.
+    Order the fields in a dictionary or ensure PIVParameters object is properly initialized.
 
     Args:
-        piv_par (Dict[str, Any]): The dictionary to order.
+        piv_par (Union[Dict[str, Any], PIVParameters]): The parameter object.
 
     Returns:
-        Dict[str, Any]: The dictionary with fields ordered alphabetically.
+        Union[Dict[str, Any], PIVParameters]: The parameter object with ordered fields.
     """
-    return {key: piv_par[key] for key in sorted(piv_par)}
+    if isinstance(piv_par, dict):
+        return {key: piv_par[key] for key in sorted(piv_par)}
+    return piv_par  # PIVParameters objects don't need ordering

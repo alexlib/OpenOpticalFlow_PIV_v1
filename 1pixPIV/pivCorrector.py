@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 from scipy.ndimage import gaussian_filter
+from .piv_parameters import PIVParameters
 
 def inpaint_nans(arr):
     # Simple inpainting function to replace NaNs with the mean of the array
@@ -12,13 +13,16 @@ def piv_corrector(piv_data, piv_data0, piv_par):
 
     piv_data_out = piv_data.copy()
 
+    # Convert piv_par to PIVParameters if it's not already
+    piv_par = PIVParameters.from_tuple_or_dict(piv_par)
+
     # exit, if corrector is not required, or if initial velocity data are not available
-    if ('crAmount' not in piv_par) or \
-            (piv_par['crAmount'] == 0) or \
-            ('U' not in piv_data0) or \
-            ('V' not in piv_data0) or \
-            ('X' not in piv_data0) or \
-            ('Y' not in piv_data0):
+    if (not hasattr(piv_par, 'crAmount') or \
+            piv_par.crAmount == 0 or \
+            'U' not in piv_data0 or \
+            'V' not in piv_data0 or \
+            'X' not in piv_data0 or \
+            'Y' not in piv_data0):
         return piv_data_out
 
     # simplify names
@@ -55,8 +59,8 @@ def piv_corrector(piv_data, piv_data0, piv_par):
         for ky in range(Y.shape[0]):
             # get mask of the current IA
             auxM = M[
-                Y[ky, kx] - (piv_par['iaSizeY'] - 1) // 2:Y[ky, kx] + (piv_par['iaSizeY'] - 1) // 2 + 1,
-                X[ky, kx] - (piv_par['iaSizeX'] - 1) // 2:X[ky, kx] + (piv_par['iaSizeX'] - 1) // 2 + 1
+                Y[ky, kx] - (piv_par.get_parameter('iaSizeY') - 1) // 2:Y[ky, kx] + (piv_par.get_parameter('iaSizeY') - 1) // 2 + 1,
+                X[ky, kx] - (piv_par.get_parameter('iaSizeX') - 1) // 2:X[ky, kx] + (piv_par.get_parameter('iaSizeX') - 1) // 2 + 1
             ]
             # get actual weighting function, respecting the mask
             W = W0 * auxM
@@ -66,23 +70,23 @@ def piv_corrector(piv_data, piv_data0, piv_par):
                 W = W / np.sum(W)
                 # get the weighted averages of velocity estimates in the IA
                 U0_avg = np.sum(U0_im[
-                    Y[ky, kx] - (piv_par['iaSizeY'] - 1) // 2:Y[ky, kx] + (piv_par['iaSizeY'] - 1) // 2 + 1,
-                    X[ky, kx] - (piv_par['iaSizeX'] - 1) // 2:X[ky, kx] + (piv_par['iaSizeX'] - 1) // 2 + 1
+                    Y[ky, kx] - (piv_par.get_parameter('iaSizeY') - 1) // 2:Y[ky, kx] + (piv_par.get_parameter('iaSizeY') - 1) // 2 + 1,
+                    X[ky, kx] - (piv_par.get_parameter('iaSizeX') - 1) // 2:X[ky, kx] + (piv_par.get_parameter('iaSizeX') - 1) // 2 + 1
                 ] * W)
                 V0_avg = np.sum(V0_im[
-                    Y[ky, kx] - (piv_par['iaSizeY'] - 1) // 2:Y[ky, kx] + (piv_par['iaSizeY'] - 1) // 2 + 1,
-                    X[ky, kx] - (piv_par['iaSizeX'] - 1) // 2:X[ky, kx] + (piv_par['iaSizeX'] - 1) // 2 + 1
+                    Y[ky, kx] - (piv_par.get_parameter('iaSizeY') - 1) // 2:Y[ky, kx] + (piv_par.get_parameter('iaSizeY') - 1) // 2 + 1,
+                    X[ky, kx] - (piv_par.get_parameter('iaSizeX') - 1) // 2:X[ky, kx] + (piv_par.get_parameter('iaSizeX') - 1) // 2 + 1
                 ] * W)
                 U_avg = np.sum(U_im[
-                    Y[ky, kx] - (piv_par['iaSizeY'] - 1) // 2:Y[ky, kx] + (piv_par['iaSizeY'] - 1) // 2 + 1,
-                    X[ky, kx] - (piv_par['iaSizeX'] - 1) // 2:X[ky, kx] + (piv_par['iaSizeX'] - 1) // 2 + 1
+                    Y[ky, kx] - (piv_par.get_parameter('iaSizeY') - 1) // 2:Y[ky, kx] + (piv_par.get_parameter('iaSizeY') - 1) // 2 + 1,
+                    X[ky, kx] - (piv_par.get_parameter('iaSizeX') - 1) // 2:X[ky, kx] + (piv_par.get_parameter('iaSizeX') - 1) // 2 + 1
                 ] * W)
                 V_avg = np.sum(V_im[
-                    Y[ky, kx] - (piv_par['iaSizeY'] - 1) // 2:Y[ky, kx] + (piv_par['iaSizeY'] - 1) // 2 + 1,
-                    X[ky, kx] - (piv_par['iaSizeX'] - 1) // 2:X[ky, kx] + (piv_par['iaSizeX'] - 1) // 2 + 1
+                    Y[ky, kx] - (piv_par.get_parameter('iaSizeY') - 1) // 2:Y[ky, kx] + (piv_par.get_parameter('iaSizeY') - 1) // 2 + 1,
+                    X[ky, kx] - (piv_par.get_parameter('iaSizeX') - 1) // 2:X[ky, kx] + (piv_par.get_parameter('iaSizeX') - 1) // 2 + 1
                 ] * W)
                 # correct the velocity change
-                piv_data_out['U'][ky, kx] = U[ky, kx] + piv_par['crAmount'] * ((U[ky, kx] - U0[ky, kx]) - (U_avg - U0_avg))
-                piv_data_out['V'][ky, kx] = V[ky, kx] + piv_par['crAmount'] * ((V[ky, kx] - V0[ky, kx]) - (V_avg - V0_avg))
+                piv_data_out['U'][ky, kx] = U[ky, kx] + piv_par.crAmount * ((U[ky, kx] - U0[ky, kx]) - (U_avg - U0_avg))
+                piv_data_out['V'][ky, kx] = V[ky, kx] + piv_par.crAmount * ((V[ky, kx] - V0[ky, kx]) - (V_avg - V0_avg))
 
     return piv_data_out

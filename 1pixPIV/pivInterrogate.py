@@ -5,6 +5,7 @@ import os
 import re
 from imageio.v2 import imread
 from scipy.interpolate import griddata
+from piv_parameters import PIVParameters
 
 def inpaint_nans(array):
     """Simple function to replace NaNs with interpolated values"""
@@ -62,8 +63,11 @@ def min_max_filter(im, piv_par, mask=None):
     MinMax filter - corrects uneven background and normalizes image contrast
     adapted following algorithm described on p. 250, Ref. [1]
     """
-    S = piv_par['iaMinMaxSize']
-    L = piv_par['iaMinMaxLevel']
+    # Convert piv_par to PIVParameters if it's not already
+    piv_par = PIVParameters.from_tuple_or_dict(piv_par)
+
+    S = piv_par.iaMinMaxSize
+    L = piv_par.iaMinMaxLevel
 
     # create masking matrix (ones in a circular matrix)
     domain = np.ones((S, S))
@@ -139,33 +143,14 @@ def piv_interrogate(im1, im2, pivData, pivPar):
     # This is a simplified implementation of the piv_interrogate function
     # It creates basic interrogation areas without deformation
 
+    # Convert pivPar to PIVParameters if it's not already
+    pivPar = PIVParameters.from_tuple_or_dict(pivPar)
+
     # Extract parameters from pivPar
-    # Handle different types of pivPar
-    if isinstance(pivPar, dict):
-        iaSizeX = pivPar.get('iaSizeX', 32)
-        iaSizeY = pivPar.get('iaSizeY', 32)
-        iaStepX = pivPar.get('iaStepX', 16)
-        iaStepY = pivPar.get('iaStepY', 16)
-    elif isinstance(pivPar, tuple):
-        # If pivPar is a tuple, it might be the result of piv_params
-        # In this case, the first element should be the parameters
-        if len(pivPar) > 0 and isinstance(pivPar[0], dict):
-            iaSizeX = pivPar[0].get('iaSizeX', 32)
-            iaSizeY = pivPar[0].get('iaSizeY', 32)
-            iaStepX = pivPar[0].get('iaStepX', 16)
-            iaStepY = pivPar[0].get('iaStepY', 16)
-        else:
-            # Default values
-            iaSizeX = 32
-            iaSizeY = 32
-            iaStepX = 16
-            iaStepY = 16
-    else:
-        # Default values
-        iaSizeX = 32
-        iaSizeY = 32
-        iaStepX = 16
-        iaStepY = 16
+    iaSizeX = pivPar.get_parameter('iaSizeX')
+    iaSizeY = pivPar.get_parameter('iaSizeY')
+    iaStepX = pivPar.get_parameter('iaStepX')
+    iaStepY = pivPar.get_parameter('iaStepY')
 
     # Process input images if they are file paths
     if isinstance(im1, str):

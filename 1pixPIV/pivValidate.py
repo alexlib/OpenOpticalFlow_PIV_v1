@@ -149,6 +149,7 @@
 # % initialize fields
 import numpy as np
 import time
+from .piv_parameters import PIVParameters
 
 def piv_validate(piv_data, piv_par):
     def medianfast(in_array):
@@ -181,65 +182,22 @@ def piv_validate(piv_data, piv_par):
     U = piv_data['U']
     V = piv_data['V']
     status = piv_data['Status']
+    # Convert piv_par to PIVParameters if it's not already
+    piv_par = PIVParameters.from_tuple_or_dict(piv_par)
+
     # Extract parameters from piv_par
-    # Handle different types of piv_par
-    if isinstance(piv_par, dict):
-        dist_t = piv_par.get('vlDistTSeq', 0)
-        dist_xy = piv_par.get('vlDist', 2)
-        passes = piv_par.get('vlPasses', 1)
-        tresh = piv_par.get('vlTresh', 2)
-        epsi = piv_par.get('vlEps', 0.1)
-        min_cc = piv_par.get('vlMinCC', 0.3)
-        dist_xy_seq = piv_par.get('vlDistSeq', 2)
-        passes_seq = piv_par.get('vlPassesSeq', 1)
-        tresh_seq = piv_par.get('vlTreshSeq', 2)
-        epsi_seq = piv_par.get('vlEpsSeq', 0.1)
-        exp_name = piv_par.get('expName', '???')
-        an_lock_file = piv_par.get('anLockFile', '')
-    elif isinstance(piv_par, tuple):
-        # If piv_par is a tuple, it might be the result of piv_params
-        # In this case, the first element should be the parameters
-        if len(piv_par) > 0 and isinstance(piv_par[0], dict):
-            dist_t = piv_par[0].get('vlDistTSeq', 0)
-            dist_xy = piv_par[0].get('vlDist', 2)
-            passes = piv_par[0].get('vlPasses', 1)
-            tresh = piv_par[0].get('vlTresh', 2)
-            epsi = piv_par[0].get('vlEps', 0.1)
-            min_cc = piv_par[0].get('vlMinCC', 0.3)
-            dist_xy_seq = piv_par[0].get('vlDistSeq', 2)
-            passes_seq = piv_par[0].get('vlPassesSeq', 1)
-            tresh_seq = piv_par[0].get('vlTreshSeq', 2)
-            epsi_seq = piv_par[0].get('vlEpsSeq', 0.1)
-            exp_name = piv_par[0].get('expName', '???')
-            an_lock_file = piv_par[0].get('anLockFile', '')
-        else:
-            # Default values
-            dist_t = 0
-            dist_xy = 2
-            passes = 1
-            tresh = 2
-            epsi = 0.1
-            min_cc = 0.3
-            dist_xy_seq = 2
-            passes_seq = 1
-            tresh_seq = 2
-            epsi_seq = 0.1
-            exp_name = '???'
-            an_lock_file = ''
-    else:
-        # Default values
-        dist_t = 0
-        dist_xy = 2
-        passes = 1
-        tresh = 2
-        epsi = 0.1
-        min_cc = 0.3
-        dist_xy_seq = 2
-        passes_seq = 1
-        tresh_seq = 2
-        epsi_seq = 0.1
-        exp_name = '???'
-        an_lock_file = ''
+    dist_t = piv_par.vlDistTSeq
+    dist_xy = piv_par.get_parameter('vlDist')
+    passes = piv_par.get_parameter('vlPasses')
+    tresh = piv_par.vlTresh
+    epsi = piv_par.vlEps
+    min_cc = piv_par.vlMinCC
+    dist_xy_seq = piv_par.vlDistSeq
+    passes_seq = piv_par.vlPassesSeq
+    tresh_seq = piv_par.vlTreshSeq
+    epsi_seq = piv_par.vlEpsSeq
+    exp_name = getattr(piv_par, 'expName', '???')
+    an_lock_file = getattr(piv_par, 'anLockFile', '')
     # Check if U is a 3D array
     if len(U.shape) < 3:
         # If U is a 2D array, reshape it to a 3D array with a single time slice
