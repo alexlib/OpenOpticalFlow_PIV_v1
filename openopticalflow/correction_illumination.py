@@ -1,45 +1,43 @@
 import numpy as np
-from scipy.ndimage import convolve
+from scipy import ndimage
 
-def correction_illumination(Im1, Im2, window_shifting, size_average):
+def correction_illumination(im1, im2, window_shifting, size_average):
     """
     Correct illumination differences between two images.
 
+    This function performs two types of illumination correction:
+    1. Global correction: Adjusts overall brightness of second image to match first
+    2. Local correction: Eliminates local illumination changes using moving average
+
     Args:
-        Im1 (np.ndarray): First input image
-        Im2 (np.ndarray): Second input image
+        im1 (np.ndarray): First input image
+        im2 (np.ndarray): Second input image
         window_shifting (list): [x3, x4, y3, y4] defining the window boundaries
         size_average (int): Size for averaging kernel. If 0, no local correction is applied
 
     Returns:
-        tuple: (I1, I2) Corrected image pair
+        tuple: (i1, i2) Corrected image pair
     """
     # Convert to float64
-    Im1 = Im1.astype(np.float64)
-    Im2 = Im2.astype(np.float64)
+    im1 = im1.astype(np.float64)
+    im2 = im2.astype(np.float64)
 
-    I1 = Im1
-    I2 = Im2
+    i1 = im1.copy()  # Prevent modifying input
+    i2 = im2.copy()
 
-    # Adjusting the overall illumination change    
+    # Global illumination correction
     x3, x4, y3, y4 = window_shifting
+    i1_mean = np.mean(i1[y3:y4, x3:x4])
+    i2_mean = np.mean(i2[y3:y4, x3:x4])
+    r12 = i1_mean / i2_mean
+    i2 = r12 * i2            
 
-    I1_mean = np.mean(I1[y3:y4, x3:x4])
-    I2_mean = np.mean(I2[y3:y4, x3:x4])
-    R12 = I1_mean / I2_mean
-    I2 = R12 * I2            
-
-    # Normalize the intensity for I2 to eliminate the local change of illumination light
+    # Local illumination correction
     if size_average > 0:
-        N = size_average
-        h = np.ones((N, N)) / (N * N)
-        I12F = convolve(I1, h, mode='reflect') - convolve(I2, h, mode='reflect')
-        I2 = I2 + I12F
-    else:
-        I2 = I2
+        kernel = np.ones((size_average, size_average)) / (size_average * size_average)
+        i1_filtered = ndimage.convolve(i1, kernel, mode='reflect')
+        i2_filtered = ndimage.convolve(i2, kernel, mode='reflect')
+        i12f = i1_filtered - i2_filtered
+        i2 = i2 + i12f
 
-    return I1, I2
-
-
-
-
+    return i1, i2

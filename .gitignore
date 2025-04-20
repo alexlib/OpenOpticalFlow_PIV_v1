@@ -1,3 +1,4 @@
 # Ignore all Python compiled files
 **/*.pyc
 **/__pycache__/
+comparison/openopticalflow/*
