@@ -44,8 +44,31 @@ def shift_image_fun_refine_1(ux, uy, Im1, Im2):
     map_y = (y_coords + uy_resized).astype(np.float32)
 
     # Ensure images are uint8 for OpenCV
-    Im1_uint8 = Im1.astype(np.uint8) if Im1.dtype != np.uint8 else Im1
-    Im2_uint8 = Im2.astype(np.uint8) if Im2.dtype != np.uint8 else Im2
+    # Handle NaN values and normalize to 0-255 range
+    Im1_clean = Im1.copy()
+    Im2_clean = Im2.copy()
+
+    # Replace NaN values with 0
+    Im1_clean[np.isnan(Im1_clean)] = 0
+    Im2_clean[np.isnan(Im2_clean)] = 0
+
+    # Normalize to 0-255 range if not already uint8
+    if Im1_clean.dtype != np.uint8:
+        Im1_min, Im1_max = np.min(Im1_clean), np.max(Im1_clean)
+        if Im1_max > Im1_min:  # Avoid division by zero
+            Im1_clean = ((Im1_clean - Im1_min) * 255 / (Im1_max - Im1_min)).astype(np.uint8)
+        else:
+            Im1_clean = np.zeros_like(Im1_clean, dtype=np.uint8)
+
+    if Im2_clean.dtype != np.uint8:
+        Im2_min, Im2_max = np.min(Im2_clean), np.max(Im2_clean)
+        if Im2_max > Im2_min:  # Avoid division by zero
+            Im2_clean = ((Im2_clean - Im2_min) * 255 / (Im2_max - Im2_min)).astype(np.uint8)
+        else:
+            Im2_clean = np.zeros_like(Im2_clean, dtype=np.uint8)
+
+    Im1_uint8 = Im1_clean
+    Im2_uint8 = Im2_clean
 
     # Remap the image
     Im1_shift = cv2.remap(Im1_uint8, map_x, map_y, cv2.INTER_LINEAR)

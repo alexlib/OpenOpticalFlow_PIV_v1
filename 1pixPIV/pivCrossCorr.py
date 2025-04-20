@@ -224,9 +224,15 @@ def stdfast(in_array):
     in_array = in_array.flatten()
     notnan = ~np.isnan(in_array)
     n = np.sum(notnan)
-    in_array[~notnan] = 0
-    avg = np.sum(in_array) / n
-    out = np.sqrt(np.sum(((in_array - avg) * notnan) ** 2) / n)  # there should be -1 in the denominator for true std
+
+    # Handle the case when all values are NaN
+    if n == 0:
+        return 0.0
+
+    in_array_copy = in_array.copy()  # Create a copy to avoid modifying the original
+    in_array_copy[~notnan] = 0
+    avg = np.sum(in_array_copy) / n
+    out = np.sqrt(np.sum(((in_array_copy - avg) * notnan) ** 2) / n)  # there should be -1 in the denominator for true std
     return out
 
 def dcn(X1, X2, MaxD):

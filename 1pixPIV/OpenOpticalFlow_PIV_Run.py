@@ -184,6 +184,13 @@ uy(1:edge_width,:)=uy((edge_width+1):(2*edge_width),:);
 """
 import numpy as np
 import imageio.v2 as imageio
+import warnings
+
+# Configure NumPy to show the source of warnings
+np.seterr(all='warn')
+# Configure warnings to show the full stack trace
+warnings.filterwarnings('always', category=RuntimeWarning)
+
 try:
     import cv2
 except ImportError:
