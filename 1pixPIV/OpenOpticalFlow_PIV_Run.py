@@ -215,8 +215,17 @@ from openopticalflow.shift_image_fun_refine_1 import shift_image_fun_refine_1
 from pivAnalyzeImagePair import piv_analyze_image_pair
 
 # Load Images
-Im1 = imageio.imread('./images/White_Oval_1.tif')
-Im2 = imageio.imread('./images/White_Oval_2.tif')
+try:
+    Im1 = imageio.imread('./images/White_Oval_1.tif')
+    Im2 = imageio.imread('./images/White_Oval_2.tif')
+    print("Successfully loaded White_Oval images")
+except Exception as e:
+    print(f"Error loading White_Oval images: {e}")
+    print("Trying alternative images...")
+    # Try loading alternative images
+    Im1 = imageio.imread('./images/vortex_pair_particles_1.tif')
+    Im2 = imageio.imread('./images/vortex_pair_particles_2.tif')
+    print("Successfully loaded vortex_pair_particles images")
 
 # Select region of interest
 index_region = 0
@@ -266,9 +275,12 @@ pivPar = {
     'iaStepX': [32, 8, 4],
     'ccMethod': 'fft'
 }
+print("Running PIV analysis...")
 pivData1 = piv_analyze_image_pair(I1, I2, pivPar)
+print(f"PIV analysis complete. Keys in pivData1: {list(pivData1.keys())}")
 ux0 = pivData1['U']
 uy0 = pivData1['V']
+print(f"Velocity field shape: {ux0.shape}")
 
 # Handle 3D arrays (if the result is a 3D array with a single time slice)
 if len(ux0.shape) > 2:
@@ -285,31 +297,50 @@ uy0 = zoom(uy0, scale)
 # Generate the shifted image and calculate velocity difference iteratively
 ux = ux0
 uy = uy0
+print(f"Initial velocity field min/max: {np.min(ux):.4f}/{np.max(ux):.4f}, {np.min(uy):.4f}/{np.max(uy):.4f}")
+
 k = 1
 while k <= no_iteration:
+    print(f"\nIteration {k}/{no_iteration}")
+    print("Shifting image based on velocity field...")
     Im1_shift, uxI, uyI = shift_image_fun_refine_1(ux, uy, I1, I2)
+    print(f"Shifted image shape: {Im1_shift.shape}")
+    print(f"Intermediate velocity field min/max: {np.min(uxI):.4f}/{np.max(uxI):.4f}, {np.min(uyI):.4f}/{np.max(uyI):.4f}")
+
     I1 = Im1_shift.astype(np.float64)
     I2 = I2.astype(np.float64)
+
+    print("Calculating optical flow...")
     dux, duy, vor, dux_horn, duy_horn, error2 = OpticalFlowPhysics_fun(I1, I2, lambda_1, lambda_2)
+    print(f"Optical flow correction min/max: {np.min(dux):.4f}/{np.max(dux):.4f}, {np.min(duy):.4f}/{np.max(duy):.4f}")
+
     ux_corr = uxI + dux
     uy_corr = uyI + duy
+    print(f"Corrected velocity field min/max: {np.min(ux_corr):.4f}/{np.max(ux_corr):.4f}, {np.min(uy_corr):.4f}/{np.max(uy_corr):.4f}")
+
     k += 1
 
 # Refined velocity field
 ux = ux_corr
 uy = uy_corr
+print(f"\nFinal velocity field shape: {ux.shape}")
+print(f"Final velocity field min/max: {np.min(ux):.4f}/{np.max(ux):.4f}, {np.min(uy):.4f}/{np.max(uy):.4f}")
 
 # Clean up the edges
+print("Cleaning up edges...")
 ux[:, :edge_width] = ux[:, edge_width:2*edge_width]
 uy[:, :edge_width] = uy[:, edge_width:2*edge_width]
 ux[:edge_width, :] = ux[edge_width:2*edge_width, :]
 uy[:edge_width, :] = uy[edge_width:2*edge_width, :]
+print(f"After edge cleanup min/max: {np.min(ux):.4f}/{np.max(ux):.4f}, {np.min(uy):.4f}/{np.max(uy):.4f}")
 
 # Plot the results
+print("\nCreating plots...")
 # Create plots similar to plots_set_1 and plots_set_2
 plt.figure(figsize=(12, 10))
 
 # Plot original images
+print(f"Original image shapes: {I1_original.shape}, {I2_original.shape}")
 plt.subplot(2, 2, 1)
 plt.imshow(I1_original, cmap='gray')
 plt.title('Original Image 1')
@@ -321,19 +352,31 @@ plt.title('Original Image 2')
 plt.colorbar()
 
 # Plot velocity field
+print(f"Velocity field shape for quiver plot: {ux.shape}, {uy.shape}")
 plt.subplot(2, 2, 3)
-plt.quiver(ux, uy, scale=10, angles='xy', scale_units='xy')
+# Use a downsampled version for quiver to avoid overcrowding
+step = max(1, min(ux.shape) // 25)  # Adjust step size based on array size
+print(f"Using step size {step} for quiver plot")
+
+# Create coordinate grid for quiver plot
+y, x = np.mgrid[0:ux.shape[0]:step, 0:ux.shape[1]:step]
+print(f"Quiver grid shape: {x.shape}, {y.shape}")
+
+# Plot quiver with proper coordinates
+plt.quiver(x, y, ux[::step, ::step], uy[::step, ::step], scale=10, angles='xy', scale_units='xy')
 plt.title('Velocity Field')
 plt.axis('equal')
 
 # Plot velocity magnitude
-plt.subplot(2, 2, 4)
 velocity_magnitude = np.sqrt(ux**2 + uy**2)
+print(f"Velocity magnitude min/max: {np.min(velocity_magnitude):.4f}/{np.max(velocity_magnitude):.4f}")
+plt.subplot(2, 2, 4)
 plt.imshow(velocity_magnitude, cmap='jet')
 plt.title('Velocity Magnitude')
 plt.colorbar()
 
 plt.tight_layout()
+print("Displaying plots...")
 plt.show()
 
 # Save results if needed
