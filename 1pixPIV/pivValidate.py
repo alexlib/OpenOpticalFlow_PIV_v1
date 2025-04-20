@@ -11,10 +11,10 @@
 # %        status ... matrix describing status of velocity vectors (for values, see Outputs section)
 # %     pivPar ... (struct) parameters defining the evaluation. Following fields are considered:
 # %         vlTresh, vlEps ... Define treshold for the median test. To accepted, the difference of actual vector
-# %                            from the median (of vectors in the neighborhood) should be at most 
+# %                            from the median (of vectors in the neighborhood) should be at most
 # %                            vlTresh *(vlEps + (neighborhood vectors) - (their median)).
-# %         vlDist ... to what distance median test is performed (if vlDist = 1, kernel has  size 3x3; for 
-# %                    vlDist = 2, kernel is 5x5, and so on).  
+# %         vlDist ... to what distance median test is performed (if vlDist = 1, kernel has  size 3x3; for
+# %                    vlDist = 2, kernel is 5x5, and so on).
 # %          vlDistSeq ... to what distance (in time) the median test is performed. If vlDistSeq == 1, medina test
 # %              will be based on one previous and one subsequent time slices. This parameter is taken in
 # %              account only if pivValidate.m is applied on pivData, in which contains data for image sequence.
@@ -23,8 +23,8 @@
 # %         vlPasses ... number of passes of the median test
 # %
 # % Outputs:
-# %     pivData  ... (struct) structure containing more detailed results. If pivData was non-empty at the input, its 
-# %              fields are preserved. Following fields are added or updated: 
+# %     pivData  ... (struct) structure containing more detailed results. If pivData was non-empty at the input, its
+# %              fields are preserved. Following fields are added or updated:
 # %        U, V ... x and y components of the velocity/displacement vector (spurious vectors replaced by NaNs)
 # %        Status ... matrix with statuis of velocity vectors (uint8). Bits have this coding:
 # %            1 (bit  1) ... masked (set by pivInterrogate)
@@ -41,7 +41,7 @@
 # %        spuriousU, spuriousV ... components of the velocity/displacement vectors, which were indicated as
 # %                             spurious
 # %
-# %        
+# %
 # % Outputs:
 # %    pivData  ... (struct) structure containing more detailed results. If some fiels were present in pivData
 # %           at the input, they are repeated. Followinf fields are added:
@@ -61,7 +61,7 @@
 # %           32 (bit 6) ... smoothed (set by pivSmooth)
 # %           64 (bit 7) ... indicated as spurious by median test based on image sequence (set by pivValidate);
 # %              this flag cannot be set when working with a single image pair
-# %          128 (bit 8) ... interpolated within image sequence (set by pivReplaced); this flag cannot be set 
+# %          128 (bit 8) ... interpolated within image sequence (set by pivReplaced); this flag cannot be set
 # %              when working with a single image pair
 # %          256 (bit 9) ... smoothed within an image sequence (set by pivSmooth); this flag cannot be set when
 # %              working with a single image pair
@@ -148,6 +148,7 @@
 
 # % initialize fields
 import numpy as np
+import time
 
 def piv_validate(piv_data, piv_par):
     def medianfast(in_array):
@@ -162,46 +163,126 @@ def piv_validate(piv_data, piv_par):
         else:
             return in_array[N//2]
 
-    vl_med_u = np.copy(piv_data['U']) * np.nan  # velocity median in the neighborhood of given IA
-    vl_med_v = np.copy(vl_med_u)
-    vl_rms_u = np.copy(vl_med_u)  # rms (from median) in the neighborhood of given IA
-    vl_rms_v = np.copy(vl_med_u)
+    # Check if U is a 3D array
+    if len(piv_data['U'].shape) < 3:
+        # If U is a 2D array, create 3D arrays for the medians and RMS
+        vl_med_u = np.copy(piv_data['U']).reshape(piv_data['U'].shape[0], piv_data['U'].shape[1], 1) * np.nan
+        vl_med_v = np.copy(vl_med_u)
+        vl_rms_u = np.copy(vl_med_u)
+        vl_rms_v = np.copy(vl_med_u)
+    else:
+        # If U is a 3D array, create 3D arrays for the medians and RMS
+        vl_med_u = np.copy(piv_data['U']) * np.nan  # velocity median in the neighborhood of given IA
+        vl_med_v = np.copy(vl_med_u)
+        vl_rms_u = np.copy(vl_med_u)  # rms (from median) in the neighborhood of given IA
+        vl_rms_v = np.copy(vl_med_u)
     X = piv_data['X']
     Y = piv_data['Y']
     U = piv_data['U']
     V = piv_data['V']
     status = piv_data['Status']
-    dist_t = piv_par.get('vlDistTSeq', 0)
-    if U.shape[2] == 1:
+    # Extract parameters from piv_par
+    # Handle different types of piv_par
+    if isinstance(piv_par, dict):
+        dist_t = piv_par.get('vlDistTSeq', 0)
+        dist_xy = piv_par.get('vlDist', 2)
+        passes = piv_par.get('vlPasses', 1)
+        tresh = piv_par.get('vlTresh', 2)
+        epsi = piv_par.get('vlEps', 0.1)
+        min_cc = piv_par.get('vlMinCC', 0.3)
+        dist_xy_seq = piv_par.get('vlDistSeq', 2)
+        passes_seq = piv_par.get('vlPassesSeq', 1)
+        tresh_seq = piv_par.get('vlTreshSeq', 2)
+        epsi_seq = piv_par.get('vlEpsSeq', 0.1)
+        exp_name = piv_par.get('expName', '???')
+        an_lock_file = piv_par.get('anLockFile', '')
+    elif isinstance(piv_par, tuple):
+        # If piv_par is a tuple, it might be the result of piv_params
+        # In this case, the first element should be the parameters
+        if len(piv_par) > 0 and isinstance(piv_par[0], dict):
+            dist_t = piv_par[0].get('vlDistTSeq', 0)
+            dist_xy = piv_par[0].get('vlDist', 2)
+            passes = piv_par[0].get('vlPasses', 1)
+            tresh = piv_par[0].get('vlTresh', 2)
+            epsi = piv_par[0].get('vlEps', 0.1)
+            min_cc = piv_par[0].get('vlMinCC', 0.3)
+            dist_xy_seq = piv_par[0].get('vlDistSeq', 2)
+            passes_seq = piv_par[0].get('vlPassesSeq', 1)
+            tresh_seq = piv_par[0].get('vlTreshSeq', 2)
+            epsi_seq = piv_par[0].get('vlEpsSeq', 0.1)
+            exp_name = piv_par[0].get('expName', '???')
+            an_lock_file = piv_par[0].get('anLockFile', '')
+        else:
+            # Default values
+            dist_t = 0
+            dist_xy = 2
+            passes = 1
+            tresh = 2
+            epsi = 0.1
+            min_cc = 0.3
+            dist_xy_seq = 2
+            passes_seq = 1
+            tresh_seq = 2
+            epsi_seq = 0.1
+            exp_name = '???'
+            an_lock_file = ''
+    else:
+        # Default values
+        dist_t = 0
+        dist_xy = 2
+        passes = 1
+        tresh = 2
+        epsi = 0.1
+        min_cc = 0.3
+        dist_xy_seq = 2
+        passes_seq = 1
+        tresh_seq = 2
+        epsi_seq = 0.1
+        exp_name = '???'
+        an_lock_file = ''
+    # Check if U is a 3D array
+    if len(U.shape) < 3:
+        # If U is a 2D array, reshape it to a 3D array with a single time slice
+        U = U.reshape(U.shape[0], U.shape[1], 1)
+        V = V.reshape(V.shape[0], V.shape[1], 1)
+        status = status.reshape(status.shape[0], status.shape[1], 1)
+        dist_t = 0
+    elif U.shape[2] == 1:
         dist_t = 0
 
     # choose parameters, depending if Pair or Sequence is validated
     if U.shape[2] == 1:
-        dist_xy = piv_par['vlDist']
-        passes = piv_par['vlPasses']
-        tresh = piv_par['vlTresh']
-        epsi = piv_par['vlEps']
+        # Already set above, no need to override
         statusbit = 4
     else:
-        dist_xy = piv_par['vlDistSeq']
-        passes = piv_par['vlPassesSeq']
-        tresh = piv_par['vlTreshSeq']
-        epsi = piv_par['vlEpsSeq']
+        # Use sequence parameters instead
+        dist_xy = dist_xy_seq
+        passes = passes_seq
+        tresh = tresh_seq
+        epsi = epsi_seq
         statusbit = 7
 
     # Validation based on ccPeak: Anything with ccPeak < vlMinCC mark as invalid.
-    if piv_par['vlMinCC'] > 0:
-        aux_low_cc = piv_data['ccPeak'] < piv_par['vlMinCC'] * medianfast(piv_data['ccPeak'])
+    if min_cc > 0:
+        # Check if ccPeak is a 3D array
+        if len(piv_data['ccPeak'].shape) < 3:
+            # If ccPeak is a 2D array, reshape it to a 3D array with a single time slice
+            aux_low_cc = (piv_data['ccPeak'] < min_cc * medianfast(piv_data['ccPeak'])).reshape(piv_data['ccPeak'].shape[0], piv_data['ccPeak'].shape[1], 1)
+        else:
+            aux_low_cc = piv_data['ccPeak'] < min_cc * medianfast(piv_data['ccPeak'])
+
         for kt in range(status.shape[2]):
             for kx in range(status.shape[1]):
                 for ky in range(status.shape[0]):
-                    if aux_low_cc[ky, kx, kt]:
+                    if aux_low_cc[ky, kx, 0] if aux_low_cc.shape[2] == 1 else aux_low_cc[ky, kx, kt]:
                         status[ky, kx, kt] = np.bitwise_or(status[ky, kx, kt], statusbit)
 
     for kpass in range(passes):  # proceed in two passes
         # replace anything invalid by NaN. Invalid vectors are those with any flag in status, except flags
         # "smoothed" or "smoothed in a sequence".
         aux_status = np.copy(status)
+        # Convert to int32 to avoid overflow
+        aux_status = aux_status.astype(np.int32)
         aux_status = np.bitwise_and(aux_status, ~32)  # clear "smoothed" flag
         aux_status = np.bitwise_and(aux_status, ~256)  # clear "smoothed in sequence" flag
         U[aux_status != 0] = np.nan  # replace anything masked, wrong, interpolated or spurious by NaN
@@ -215,10 +296,9 @@ def piv_validate(piv_data, piv_par):
             if (kt - 1) / 5 == round((kt - 1) / 5) and U.shape[2] > 1:
                 if kt > 1:
                     print(f' Average time {time.time() - tpass:.2f} s per time slice.')
-                auxstr = piv_par.get('expName', '???')
-                print(f'Validation of vectors in a sequence ({auxstr}): pass {kpass + 1} of {passes}, time slice {kt + 1} of {U.shape[2]}...')
-                if 'anLockFile' in piv_par and len(piv_par['anLockFile']) > 0:
-                    with open(piv_par['anLockFile'], 'w') as flock:
+                print(f'Validation of vectors in a sequence ({exp_name}): pass {kpass + 1} of {passes}, time slice {kt + 1} of {U.shape[2]}...')
+                if an_lock_file and len(an_lock_file) > 0:
+                    with open(an_lock_file, 'w') as flock:
                         flock.write(f'{time.ctime()}\nValidating sequence...')
                 tpass = time.time()
             for kx in range(U.shape[1]):
@@ -246,12 +326,18 @@ def piv_validate(piv_data, piv_par):
 
     # output detailed piv_data
     if U.shape[2] == 1:
-        aux_spur = np.bitwise_or(np.bitwise_and(status, 4) != 0, np.bitwise_and(status, 128) != 0)
+        # If U is a 3D array with a single time slice, we need to extract the 2D slice
+        aux_spur = np.bitwise_or(np.bitwise_and(status[:, :, 0], 4) != 0, np.bitwise_and(status[:, :, 0], 128) != 0)
         vl_n_spur = np.sum(aux_spur)
         spurious_x = X[aux_spur]
         spurious_y = Y[aux_spur]
-        spurious_u = piv_data['U'][aux_spur]
-        spurious_v = piv_data['V'][aux_spur]
+        # Check if piv_data['U'] is a 3D array
+        if len(piv_data['U'].shape) < 3:
+            spurious_u = piv_data['U'][aux_spur]
+            spurious_v = piv_data['V'][aux_spur]
+        else:
+            spurious_u = piv_data['U'][:, :, 0][aux_spur]
+            spurious_v = piv_data['V'][:, :, 0][aux_spur]
     else:
         vl_n_spur = np.full(U.shape[2], np.nan)
         for kt in range(U.shape[2]):

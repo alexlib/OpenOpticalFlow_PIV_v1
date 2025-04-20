@@ -1,12 +1,16 @@
 import numpy as np
 from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
-from inpaint import inpaint_nans, inpaint_nans3
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from inpaint_nans import inpaint_nans
+from inpaint_nans3 import inpaint_nans3
 from inpaintn import inpaintn
 
 def piv_replace(piv_data, piv_par):
     """
     Replace displacement vectors containing NaN with values coherent with their neighborhood.
-    
+
     Parameters:
         piv_data (dict): Dictionary containing detailed results.
             Required fields are:
@@ -16,11 +20,11 @@ def piv_replace(piv_data, piv_par):
         piv_par (dict): Parameters defining the evaluation.
             Required field is:
                 rpMethod: Specifies how the spurious vectors are replaced.
-    
+
     Returns:
         piv_data (dict): Updated dictionary with replaced NaN values.
     """
-    
+
     single_type = piv_data['U'].dtype == np.float32
 
     X0 = piv_data['X'].astype(np.float64)
@@ -139,7 +143,7 @@ def piv_replace(piv_data, piv_par):
     else:
         status[replaced] = np.bitwise_or(status[replaced], 128)
         piv_data['replacedN'] = [np.sum(replaced[:, :, kt]) for kt in range(piv_data['U'].shape[2])]
-    
+
     piv_data['Status'] = status.astype(np.uint16)
 
     return piv_data

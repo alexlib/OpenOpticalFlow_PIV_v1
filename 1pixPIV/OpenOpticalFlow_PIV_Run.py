@@ -205,7 +205,7 @@ from openopticalflow.OpticalFlowPhysics_fun import OpticalFlowPhysics_fun
 from openopticalflow.shift_image_fun_refine_1 import shift_image_fun_refine_1
 
 # Import PIV analysis functions
-from .pivAnalyzeImagePair import piv_analyze_image_pair
+from pivAnalyzeImagePair import piv_analyze_image_pair
 
 # Load Images
 Im1 = imageio.imread('./images/White_Oval_1.tif')

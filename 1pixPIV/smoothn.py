@@ -56,9 +56,9 @@ def smoothn(*args):
     # %   >IDCTN</a> are required.
     # %
     # %   Reference
-    # %   --------- 
+    # %   ---------
     # %   Garcia D, Robust smoothing of gridded data in one and higher dimensions
-    # %   with missing values. Computational Statistics & Data Analysis, 2010. 
+    # %   with missing values. Computational Statistics & Data Analysis, 2010.
     # %   <a
     # %   href="matlab:web('http://www.biomecardio.com/pageshtm/publi/csda10.pdf')">PDF download</a>
     # %
@@ -342,7 +342,7 @@ def smoothn(*args):
         print(f'Warning: Maximum number of iterations ({MaxIter}) has been exceeded. Increase MaxIter option or decrease TolZ value.')
 
 
-%% GCV score
+# GCV score
 #---
 def gcv(p):
     """
@@ -366,7 +366,7 @@ def gcv(p):
 def robust_weights(r, I, h, wstr):
     """
     Weights for robust smoothing.
-    
+
     Parameters
     ----------
     r : array_like
@@ -377,7 +377,7 @@ def robust_weights(r, I, h, wstr):
         Average leverage.
     wstr : str
         Weighting function ('cauchy', 'talworth', or 'bisquare').
-    
+
     Returns
     -------
     W : ndarray
@@ -385,7 +385,7 @@ def robust_weights(r, I, h, wstr):
     """
     MAD = np.median(np.abs(r[I] - np.median(r[I])))  # median absolute deviation
     u = np.abs(r / (1.4826 * MAD) / np.sqrt(1 - h))  # studentized residuals
-    
+
     if wstr == 'cauchy':
         c = 2.385
         W = 1 / (1 + (u / c) ** 2)  # Cauchy weights
@@ -397,7 +397,7 @@ def robust_weights(r, I, h, wstr):
         W = (1 - (u / c) ** 2) ** 2 * ((u / c) < 1)  # bisquare weights
     else:
         raise ValueError('A valid weighting function must be chosen')
-    
+
     W[np.isnan(W)] = 0
     return W
 
@@ -421,14 +421,14 @@ from scipy.ndimage import distance_transform_edt
 def initial_guess(y, I):
     """
     Initial guess with weighted/missing data.
-    
+
     Parameters
     ----------
     y : array_like
         Input array.
     I : array_like
         Boolean array indicating finite values in y.
-    
+
     Returns
     -------
     z : ndarray
@@ -449,7 +449,7 @@ def initial_guess(y, I):
                   'to ensure complete convergence. Increase "MaxIter" criterion if necessary.')
     else:
         z = y.copy()
-    
+
     # Coarse fast smoothing using one-tenth of the DCT coefficients
     siz = z.shape
     z, w = dctn(z)
@@ -458,10 +458,10 @@ def initial_guess(y, I):
         z[ceil(siz[k] / 10):] = 0
         z = np.moveaxis(z, 0, k)
     z, _ = idctn(z, w=w)
-    
+
     return z
 
-%% N-D Discrete cosine transform
+# N-D Discrete cosine transform
 
 import numpy as np
 from scipy.fftpack import dct, idct

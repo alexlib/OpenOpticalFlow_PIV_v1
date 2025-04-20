@@ -140,10 +140,32 @@ def piv_interrogate(im1, im2, pivData, pivPar):
     # It creates basic interrogation areas without deformation
 
     # Extract parameters from pivPar
-    iaSizeX = pivPar['iaSizeX']
-    iaSizeY = pivPar['iaSizeY']
-    iaStepX = pivPar['iaStepX']
-    iaStepY = pivPar['iaStepY']
+    # Handle different types of pivPar
+    if isinstance(pivPar, dict):
+        iaSizeX = pivPar.get('iaSizeX', 32)
+        iaSizeY = pivPar.get('iaSizeY', 32)
+        iaStepX = pivPar.get('iaStepX', 16)
+        iaStepY = pivPar.get('iaStepY', 16)
+    elif isinstance(pivPar, tuple):
+        # If pivPar is a tuple, it might be the result of piv_params
+        # In this case, the first element should be the parameters
+        if len(pivPar) > 0 and isinstance(pivPar[0], dict):
+            iaSizeX = pivPar[0].get('iaSizeX', 32)
+            iaSizeY = pivPar[0].get('iaSizeY', 32)
+            iaStepX = pivPar[0].get('iaStepX', 16)
+            iaStepY = pivPar[0].get('iaStepY', 16)
+        else:
+            # Default values
+            iaSizeX = 32
+            iaSizeY = 32
+            iaStepX = 16
+            iaStepY = 16
+    else:
+        # Default values
+        iaSizeX = 32
+        iaSizeY = 32
+        iaStepX = 16
+        iaStepY = 16
 
     # Process input images if they are file paths
     if isinstance(im1, str):

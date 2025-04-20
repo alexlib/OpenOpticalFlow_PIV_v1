@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.ndimage import gaussian_filter
-from smoothn import smoothn  # Assuming you have a Python equivalent of smoothn.m
+from smoothn_fixed import smoothn
 
 def piv_smooth(piv_data, piv_par):
     """
@@ -70,7 +70,6 @@ def piv_smooth(piv_data, piv_par):
         if Uin.ndim > 2:
             print('Error (pivSmooth): smMethod "Gauss" is allowed only for data on image pair, not on sequences.')
             return
-        h = gaussian_filter(Uin, sigma)
         U = gaussian_filter(Uin, sigma)
         V = gaussian_filter(Vin, sigma)
         status[~np.isnan(U) | ~np.isnan(V)] = np.bitwise_or(status[~np.isnan(U) | ~np.isnan(V)], bit)

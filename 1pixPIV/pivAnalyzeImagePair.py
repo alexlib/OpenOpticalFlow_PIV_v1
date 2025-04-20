@@ -310,19 +310,18 @@ import numpy as np
 import time
 import os
 import sys
-from scipy.ndimage import gaussian_filter
 
 # Add parent directory to Python path to allow imports from sibling packages
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import PIV analysis functions
-from .pivParams import piv_params
-from .pivInterrogate import piv_interrogate
-from .pivCrossCorr import piv_cross_corr
-from .pivCorrector import piv_corrector
-from .pivValidate import piv_validate
-from .pivReplace import piv_replace
-from .pivSmooth import piv_smooth
+from pivParams import piv_params
+from pivInterrogate import piv_interrogate
+from pivCrossCorr import piv_cross_corr
+from pivCorrector import piv_corrector
+from pivValidate import piv_validate
+from pivReplace import piv_replace
+from pivSmooth import piv_smooth
 
 def piv_analyze_image_pair(im1, im2, pivPar=None):
 
@@ -370,7 +369,9 @@ def piv_analyze_image_pair(im1, im2, pivPar=None):
         exIm1, exIm2, pivData = piv_interrogate(im1, im2, pivData, pivPar)
 
         # Compute cross-correlation between interrogation areas
-        pivData = piv_cross_corr(exIm1, exIm2, pivData, pivPar)
+        pivData, ccPeakIm = piv_cross_corr(exIm1, exIm2, pivData, pivPar)
+        # Store ccPeakIm if needed for visualization
+        pivData['ccPeakIm'] = ccPeakIm
 
         # Apply predictor-corrector to the velocity data
         pivData = piv_corrector(pivData, pivData0, pivPar)
@@ -395,6 +396,7 @@ def piv_analyze_image_pair(im1, im2, pivPar=None):
 
         # Remove temporary data from pivData
         pivData.pop('ccW', None)
+        pivData.pop('ccPeakIm', None)  # Remove the large cross-correlation image data
         pivData = dict(sorted(pivData.items()))
 
         # Get the computational time
