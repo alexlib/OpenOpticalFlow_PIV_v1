@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Import the implementations
-from openopticalflow.vorticity_factor import vorticity_factor
+# Import the implementation
+from openopticalflow.vorticity import vorticity
 
 def test_vorticity_scaling():
     """Test the scaling of vorticity calculation"""
@@ -33,7 +33,7 @@ def test_vorticity_scaling():
 
     for i, (factor_x, factor_y) in enumerate(scaling_factors):
         # Calculate vorticity
-        omega = vorticity_factor(vx, vy, factor_x, factor_y)
+        omega = vorticity(vx, vy, factor_x, factor_y)
 
         # Calculate theoretical vorticity
         # For rigid body rotation, vorticity = 2 * angular velocity

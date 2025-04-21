@@ -10,6 +10,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import the implementations
 from openopticalflow.vorticity import vorticity
 
+# Create results directory if it doesn't exist
+os.makedirs('results', exist_ok=True)
+
 def taylor_green_vortex(x, y, t=0, nu=0.01, A=1.0):
     """
     Taylor-Green vortex - an exact solution to the 2D Navier-Stokes equations.
@@ -105,109 +108,183 @@ def lamb_oseen_vortex(x, y, t=1.0, nu=0.01, Gamma=1.0):
 
     return vx, vy, omega
 
-def test_vorticity_analytical():
-    """Test vorticity calculation against analytical solutions"""
-
-    # Create a grid
+# Helper function to create grid
+def create_grid():
     n = 100
     x = np.linspace(-np.pi, np.pi, n)
     y = np.linspace(-np.pi, np.pi, n)
     X, Y = np.meshgrid(x, y)
+    return X, Y, x, y, n
 
-    # Test cases
-    test_cases = [
-        ("Taylor-Green Vortex", lambda: taylor_green_vortex(X, Y)),
-        ("Rankine Vortex", lambda: rankine_vortex(X, Y)),
-        ("Lamb-Oseen Vortex", lambda: lamb_oseen_vortex(X, Y))
-    ]
+# Helper function to calculate error metrics
+def calculate_error_metrics(omega_numerical, omega_analytical):
+    abs_error = np.abs(omega_numerical - omega_analytical)
+    mean_abs_error = np.mean(abs_error)
+    max_abs_error = np.max(abs_error)
+    rel_error = np.zeros_like(abs_error)
+    nonzero = np.abs(omega_analytical) > 1e-10
+    rel_error[nonzero] = abs_error[nonzero] / np.abs(omega_analytical[nonzero])
+    mean_rel_error = np.mean(rel_error[nonzero]) if np.any(nonzero) else 0
 
-    # Run tests
-    for name, vortex_func in test_cases:
-        print(f"\nTesting {name}:")
+    return abs_error, mean_abs_error, max_abs_error, rel_error, mean_rel_error, nonzero
 
-        # Generate velocity field and analytical vorticity
-        vx, vy, omega_analytical = vortex_func()
+# Helper function to plot results
+def plot_vorticity_results(X, Y, vx, vy, omega_analytical, omega_numerical,
+                         abs_error, mean_abs_error, max_abs_error,
+                         rel_error, mean_rel_error, nonzero, x, n, name):
+    plt.figure(figsize=(15, 10))
 
-        # Calculate numerical vorticity
-        start = time()
-        # Apply smoothing for Rankine vortex to handle discontinuity
-        if name == "Rankine Vortex":
-            omega_numerical = vorticity(vx, vy, smooth=True, sigma=0.7)
-        else:
-            omega_numerical = vorticity(vx, vy)
-        end = time()
+    # Velocity field
+    plt.subplot(231)
+    plt.quiver(X[::5, ::5], Y[::5, ::5], vx[::5, ::5], vy[::5, ::5])
+    plt.title(f'{name} - Velocity Field')
+    plt.axis('equal')
 
-        # Calculate error metrics
-        abs_error = np.abs(omega_numerical - omega_analytical)
-        mean_abs_error = np.mean(abs_error)
-        max_abs_error = np.max(abs_error)
-        rel_error = np.zeros_like(abs_error)
-        nonzero = np.abs(omega_analytical) > 1e-10
-        rel_error[nonzero] = abs_error[nonzero] / np.abs(omega_analytical[nonzero])
-        mean_rel_error = np.mean(rel_error[nonzero]) if np.any(nonzero) else 0
+    # Analytical vorticity
+    plt.subplot(232)
+    im = plt.imshow(omega_analytical, extent=[-np.pi, np.pi, -np.pi, np.pi],
+               origin='lower', cmap='RdBu_r')
+    plt.colorbar(im)
+    plt.title('Analytical Vorticity')
 
-        # Print results
-        print(f"Execution time: {(end - start)*1000:.3f} ms")
-        print(f"Mean absolute error: {mean_abs_error:.6f}")
-        print(f"Maximum absolute error: {max_abs_error:.6f}")
-        print(f"Mean relative error: {mean_rel_error:.6f}")
+    # Numerical vorticity
+    plt.subplot(233)
+    im = plt.imshow(omega_numerical, extent=[-np.pi, np.pi, -np.pi, np.pi],
+               origin='lower', cmap='RdBu_r')
+    plt.colorbar(im)
+    plt.title('Numerical Vorticity')
 
-        # Plot results
-        plt.figure(figsize=(15, 10))
+    # Absolute error
+    plt.subplot(234)
+    im = plt.imshow(abs_error, extent=[-np.pi, np.pi, -np.pi, np.pi],
+               origin='lower', cmap='viridis')
+    plt.colorbar(im)
+    plt.title(f'Absolute Error\nMean: {mean_abs_error:.6f}, Max: {max_abs_error:.6f}')
 
-        # Velocity field
-        plt.subplot(231)
-        plt.quiver(X[::5, ::5], Y[::5, ::5], vx[::5, ::5], vy[::5, ::5])
-        plt.title(f'{name} - Velocity Field')
-        plt.axis('equal')
+    # Relative error (where analytical vorticity is non-zero)
+    plt.subplot(235)
+    rel_error_plot = np.copy(rel_error)
+    rel_error_plot[~nonzero] = 0
+    im = plt.imshow(rel_error_plot, extent=[-np.pi, np.pi, -np.pi, np.pi],
+               origin='lower', cmap='viridis', vmax=min(1.0, np.max(rel_error_plot)*1.2))
+    plt.colorbar(im)
+    plt.title(f'Relative Error\nMean: {mean_rel_error:.6f}')
 
-        # Analytical vorticity
-        plt.subplot(232)
-        im = plt.imshow(omega_analytical, extent=[-np.pi, np.pi, -np.pi, np.pi],
-                   origin='lower', cmap='RdBu_r')
-        plt.colorbar(im)
-        plt.title('Analytical Vorticity')
+    # Cross-section plot
+    plt.subplot(236)
+    mid_idx = n // 2
+    plt.plot(x, omega_analytical[mid_idx, :], 'b-', label='Analytical')
+    plt.plot(x, omega_numerical[mid_idx, :], 'r--', label='Numerical')
+    plt.legend()
+    plt.title('Cross-section at y=0')
+    plt.xlabel('x')
+    plt.ylabel('Vorticity')
 
-        # Numerical vorticity
-        plt.subplot(233)
-        im = plt.imshow(omega_numerical, extent=[-np.pi, np.pi, -np.pi, np.pi],
-                   origin='lower', cmap='RdBu_r')
-        plt.colorbar(im)
-        plt.title('Numerical Vorticity')
+    plt.tight_layout()
+    plt.savefig(f'results/vorticity_{name.lower().replace("-", "_").replace(" ", "_")}.png')
+    plt.close()
 
-        # Absolute error
-        plt.subplot(234)
-        im = plt.imshow(abs_error, extent=[-np.pi, np.pi, -np.pi, np.pi],
-                   origin='lower', cmap='viridis')
-        plt.colorbar(im)
-        plt.title(f'Absolute Error\nMean: {mean_abs_error:.6f}, Max: {max_abs_error:.6f}')
+# Test for Taylor-Green vortex
+def test_taylor_green_vortex(grid):
+    X, Y, x, y, n = grid
 
-        # Relative error (where analytical vorticity is non-zero)
-        plt.subplot(235)
-        rel_error_plot = np.copy(rel_error)
-        rel_error_plot[~nonzero] = 0
-        im = plt.imshow(rel_error_plot, extent=[-np.pi, np.pi, -np.pi, np.pi],
-                   origin='lower', cmap='viridis', vmax=min(1.0, np.max(rel_error_plot)*1.2))
-        plt.colorbar(im)
-        plt.title(f'Relative Error\nMean: {mean_rel_error:.6f}')
+    # Generate velocity field and analytical vorticity
+    vx, vy, omega_analytical = taylor_green_vortex(X, Y)
 
-        # Cross-section plot
-        plt.subplot(236)
-        mid_idx = n // 2
-        plt.plot(x, omega_analytical[mid_idx, :], 'b-', label='Analytical')
-        plt.plot(x, omega_numerical[mid_idx, :], 'r--', label='Numerical')
-        plt.legend()
-        plt.title('Cross-section at y=0')
-        plt.xlabel('x')
-        plt.ylabel('Vorticity')
+    # Calculate numerical vorticity
+    start = time()
+    omega_numerical = vorticity(vx, vy)
+    end = time()
 
-        plt.tight_layout()
-        plt.savefig(f'results/vorticity_{name.lower().replace("-", "_").replace(" ", "_")}.png')
-        plt.close()
+    # Calculate error metrics
+    abs_error, mean_abs_error, max_abs_error, rel_error, mean_rel_error, nonzero = \
+        calculate_error_metrics(omega_numerical, omega_analytical)
+
+    # Print results
+    print(f"\nTesting Taylor-Green Vortex:")
+    print(f"Execution time: {(end - start)*1000:.3f} ms")
+    print(f"Mean absolute error: {mean_abs_error:.6f}")
+    print(f"Maximum absolute error: {max_abs_error:.6f}")
+    print(f"Mean relative error: {mean_rel_error:.6f}")
+
+    # Plot results
+    plot_vorticity_results(X, Y, vx, vy, omega_analytical, omega_numerical,
+                          abs_error, mean_abs_error, max_abs_error,
+                          rel_error, mean_rel_error, nonzero, x, n, "Taylor-Green Vortex")
+
+    # Assert that errors are within acceptable limits
+    assert mean_abs_error < 1.0, f"Mean absolute error too high: {mean_abs_error}"
+    assert mean_rel_error < 2.0, f"Mean relative error too high: {mean_rel_error}"
+
+# Test for Rankine vortex
+def test_rankine_vortex(grid):
+    X, Y, x, y, n = grid
+
+    # Generate velocity field and analytical vorticity
+    vx, vy, omega_analytical = rankine_vortex(X, Y)
+
+    # Calculate numerical vorticity with smoothing
+    start = time()
+    omega_numerical = vorticity(vx, vy, smooth=True, sigma=0.7)
+    end = time()
+
+    # Calculate error metrics
+    abs_error, mean_abs_error, max_abs_error, rel_error, mean_rel_error, nonzero = \
+        calculate_error_metrics(omega_numerical, omega_analytical)
+
+    # Print results
+    print(f"\nTesting Rankine Vortex:")
+    print(f"Execution time: {(end - start)*1000:.3f} ms")
+    print(f"Mean absolute error: {mean_abs_error:.6f}")
+    print(f"Maximum absolute error: {max_abs_error:.6f}")
+    print(f"Mean relative error: {mean_rel_error:.6f}")
+
+    # Plot results
+    plot_vorticity_results(X, Y, vx, vy, omega_analytical, omega_numerical,
+                          abs_error, mean_abs_error, max_abs_error,
+                          rel_error, mean_rel_error, nonzero, x, n, "Rankine Vortex")
+
+    # Assert that errors are within acceptable limits
+    assert mean_abs_error < 0.1, f"Mean absolute error too high: {mean_abs_error}"
+    assert mean_rel_error < 1.0, f"Mean relative error too high: {mean_rel_error}"
+
+# Test for Lamb-Oseen vortex
+def test_lamb_oseen_vortex(grid):
+    X, Y, x, y, n = grid
+
+    # Generate velocity field and analytical vorticity
+    vx, vy, omega_analytical = lamb_oseen_vortex(X, Y)
+
+    # Calculate numerical vorticity
+    start = time()
+    omega_numerical = vorticity(vx, vy)
+    end = time()
+
+    # Calculate error metrics
+    abs_error, mean_abs_error, max_abs_error, rel_error, mean_rel_error, nonzero = \
+        calculate_error_metrics(omega_numerical, omega_analytical)
+
+    # Print results
+    print(f"\nTesting Lamb-Oseen Vortex:")
+    print(f"Execution time: {(end - start)*1000:.3f} ms")
+    print(f"Mean absolute error: {mean_abs_error:.6f}")
+    print(f"Maximum absolute error: {max_abs_error:.6f}")
+    print(f"Mean relative error: {mean_rel_error:.6f}")
+
+    # Plot results
+    plot_vorticity_results(X, Y, vx, vy, omega_analytical, omega_numerical,
+                          abs_error, mean_abs_error, max_abs_error,
+                          rel_error, mean_rel_error, nonzero, x, n, "Lamb-Oseen Vortex")
+
+    # Assert that errors are within acceptable limits
+    assert mean_abs_error < 0.1, f"Mean absolute error too high: {mean_abs_error}"
+    assert mean_rel_error < 10.0, f"Mean relative error too high: {mean_rel_error}"
 
 if __name__ == "__main__":
-    # Create results directory if it doesn't exist
-    os.makedirs('results', exist_ok=True)
+    # Run tests manually when script is executed directly
+    grid_fixture = create_grid()
 
     # Run tests
-    test_vorticity_analytical()
+    test_taylor_green_vortex(grid_fixture)
+    test_rankine_vortex(grid_fixture)
+    test_lamb_oseen_vortex(grid_fixture)
