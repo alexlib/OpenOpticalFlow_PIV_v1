@@ -1,144 +1,130 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.ndimage import gaussian_filter
-from shift_image_fun_refine_1 import shift_image_fun_refine_1
 
-def vis_flow(Vx, Vy, gx=30, offset=1, mag=1, col='b'):
+def vis_flow(vx, vy, gx=25, offset=0, mag=1, color='b', show_plot=True):
     """
-    Visualize the velocity field and streamlines.
+    Visualize flow field using quiver plot with subsampling and normalized arrows.
 
-    Args:
-        Vx (np.ndarray): Velocity field in x-direction.
-        Vy (np.ndarray): Velocity field in y-direction.
-        gx (int): Grid spacing for streamlines.
-        offset (int): Offset for streamlines.
-        mag (int): Magnification factor for velocity vectors.
-        col (str): Color for streamlines.
+    This function creates a quiver plot (vector field visualization) of the velocity field
+    defined by vx and vy components. It subsamples the field to avoid overcrowding and
+    normalizes the arrows for better visualization.
+
+    Parameters:
+        vx (numpy.ndarray): x-component of velocity field
+        vy (numpy.ndarray): y-component of velocity field
+        gx (int): Grid spacing parameter. Controls the density of arrows.
+                 Higher values result in fewer arrows.
+        offset (int): Offset for sampling grid points
+        mag (float): Magnitude scaling factor. Higher values result in longer arrows.
+        color (str): Color of the arrows
+        show_plot (bool): Whether to call plt.show() (default: True)
 
     Returns:
-        None
+        matplotlib.axes.Axes: Axes object containing the quiver plot
     """
-    # Calculate the velocity magnitude
-    Vmag = np.sqrt(Vx**2 + Vy**2)
+    sy, sx = vx.shape
 
-    # Normalize the velocity vectors
-    Vx = Vx / Vmag
-    Vy = Vy / Vmag
+    if gx == 0:
+        jmp = 1
+    else:
+        jmp = max(1, sx // gx)
 
-    # Create a grid for streamlines
-    x = np.arange(0, Vx.shape[1], gx)
-    y = np.arange(0, Vx.shape[0], gx)
-    x, y = np.meshgrid(x, y)
+    indx = np.arange(offset, sx, jmp)
+    indy = np.arange(offset, sy, jmp)
 
-    # Calculate the velocity vectors for streamlines
-    u = Vx[::gx, ::gx]
-    v = Vy[::gx, ::gx]
+    X, Y = np.meshgrid(indx, indy)
 
-    # Plot the velocity field
-    plt.figure(figsize=(10, 8))
-    plt.quiver(x, y, u, v, scale=mag, angles='xy', scale_units='xy', color=col)
-    plt.title('Velocity Field')
-    plt.axis('equal')
+    # Extract velocity components at the sampled points
+    U = vx[indy][:, indx]
+    V = vy[indy][:, indx]
 
-    # Plot streamlines
-    plt.streamplot(x, y, u, v, density=[0.5, 1], color=col)
-    plt.title('Streamlines')
-    plt.axis('equal')
+    # Handle NaN values
+    mask = ~(np.isnan(U) | np.isnan(V))
+    if not mask.any():
+        U[0,0] = 1
+        V[0,0] = 0
+        X[0,0] = 1
+        Y[0,0] = 1
+        mask[0,0] = True
 
-    plt.show()
+    # Calculate the scale for arrow lengths
+    vel_magnitude = np.sqrt(U[mask]**2 + V[mask]**2)
 
-def main():
-    """
-    Main program for extraction of velocity field from a pair of flow visualization images.
-    """
-    # Read a pair of images
-    Im1 = cv2.imread('White_oval_1.tif', cv2.IMREAD_GRAYSCALE)
-    Im2 = cv2.imread('White_Oval_2.tif', cv2.IMREAD_GRAYSCALE)
+    # Calculate scale for arrow lengths
+    if vel_magnitude.size > 0 and np.mean(vel_magnitude) > 0:
+        # Calculate scale - smaller values make longer arrows
+        scale_factor = 1.0 / (np.max(vel_magnitude) * mag)
+    else:
+        scale_factor = 1.0
 
-    # Set the parameters for optical flow computation
-    lambda_1 = 20  # Horn-Schunck estimator for initial field
-    lambda_2 = 2000  # Liu-Shen estimator for refined estimation
-    no_iteration = 1  # Number of iterations in the coarse-to-fine iterative process
-    scale_im = 0.5  # Scale factor for downsizing images
-    size_average = 0  # Size for averaging to bypass local illumination intensity adjustment
-    size_filter = 4  # Gaussian filter size for removing random noise
-    index_region = 1  # Select a region for processing (1) or process the whole image (0)
+    # Plot quiver with normalized arrows
+    fig, ax = plt.subplots(figsize=(10, 8))
+    ax.quiver(X[mask], Y[mask], U[mask], V[mask],
+              scale=scale_factor,    # Apply calculated scale
+              scale_units='xy',      # Use xy coordinate system for scaling
+              angles='xy',           # Use xy coordinate system for angles
+              width=0.003,           # Normalized arrow width (smaller = thinner)
+              headwidth=4,           # Head width relative to shaft (larger = wider)
+              headlength=6,          # Head length relative to shaft (larger = longer)
+              headaxislength=5,      # Head length at shaft intersection
+              color=color,
+              pivot='mid')
 
-    # Select a region of interest for diagnostics
-    if index_region == 1:
-        plt.imshow(Im1, cmap='gray')
-        plt.colorbar()
-        plt.axis('image')
+    ax.set_xlim(0, sx)
+    ax.set_ylim(0, sy)
+
+    if show_plot:
         plt.show()
 
-        xy = plt.ginput(2)
-        x1, x2 = int(np.floor(min(xy[:, 0]))), int(np.floor(max(xy[:, 0])))
-        y1, y2 = int(np.floor(min(xy[:, 1]))), int(np.floor(max(xy[:, 1])))
-        Im1 = Im1[y1:y2, x1:x2]
-        Im2 = Im2[y1:y2, x1:x2]
-    elif index_region == 0:
-        pass
+    return ax
 
-    Im1_original = Im1.copy()
-    Im2_original = Im2.copy()
+def plot_streamlines(vx, vy, gx=25, offset=0, density=2, color='blue', show_plot=True):
+    """
+    Visualize flow field using streamlines.
 
-    # Correct the global and local intensity change in images
-    window_shifting = np.array([1, Im1.shape[0], 1, Im1.shape[1]])
-    Im1, Im2 = correction_illumination(Im1, Im2, window_shifting, size_average)
+    Parameters:
+        vx (numpy.ndarray): x-component of velocity field
+        vy (numpy.ndarray): y-component of velocity field
+        gx (int): Grid spacing parameter
+        offset (int): Offset for sampling grid points
+        density (float or tuple): Controls the density of streamlines
+        color (str): Color of the streamlines
+        show_plot (bool): Whether to call plt.show() (default: True)
 
-    # Pre-process for reducing random noise and downsampling images if displacements are large
-    Im1, Im2 = pre_processing_a(Im1, Im2, scale_im, size_filter)
+    Returns:
+        matplotlib.axes.Axes: Axes object containing the streamlines plot
+    """
+    sy, sx = vx.shape
 
-    I_region1 = Im1.copy()
-    I_region2 = Im2.copy()
+    # Create grid for streamlines
+    y, x = np.meshgrid(np.arange(sy), np.arange(sx), indexing='ij')
 
-    # Initial optical flow calculation for a coarse-grained velocity field
-    ux0, uy0, vor, ux_horn, uy_horn, error1 = optical_flow_physics_fun(I_region1, I_region2, lambda_1, lambda_2)
+    fig, ax = plt.subplots(figsize=(10, 8))
+    ax.streamplot(x, y, vx, vy, density=density, color=color)
 
-    # Generate the shifted image from Im1 based on the initial coarse-grained velocity field (ux0, uy0)
-    Im1 = cv2.convertScaleAbs(Im1_original)
-    Im2 = cv2.convertScaleAbs(Im2_original)
+    ax.set_xlim(0, sx)
+    ax.set_ylim(0, sy)
+    ax.invert_yaxis()  # Invert y-axis to match image coordinates
 
-    ux_corr = ux0.copy()
-    uy_corr = uy0.copy()
+    if show_plot:
+        plt.show()
 
-    # Estimate the displacement vector and make correction in iterations
-    k = 1
-    while k <= no_iteration:
-        Im1_shift, uxI, uyI = shift_image_fun_refine_1(ux_corr, uy_corr, Im1, Im2)
+    return ax
 
-        # Calculation of correction of the optical flow
-        ux_corr, uy_corr, vor, ux_horn, uy_horn, error2 = optical_flow_physics_fun(Im1_shift, Im2, lambda_1, lambda_2)
+# Example usage
+if __name__ == "__main__":
+    # Create a sample flow field (rotating vortex)
+    size = 100
+    y, x = np.meshgrid(np.linspace(-1, 1, size), np.linspace(-1, 1, size), indexing='ij')
+    vx = -y
+    vy = x
 
-        k += 1
+    # Visualize with quiver plot
+    ax1 = vis_flow(vx, vy, gx=10, mag=2, color='red')
+    ax1.set_title('Velocity Field (Quiver Plot)')
 
-    # Refined velocity field
-    ux = ux_corr
-    uy = uy_corr
-
-    # Show the images and processed results
-    plt.figure()
-    plt.subplot(2, 2, 1)
-    plt.imshow(Im1_original, cmap='gray')
-    plt.title('Original Image 1')
-    plt.colorbar()
-
-    plt.subplot(2, 2, 2)
-    plt.imshow(Im2_original, cmap='gray')
-    plt.title('Original Image 2')
-    plt.colorbar()
-
-    plt.subplot(2, 2, 3)
-    plt.quiver(ux, uy, scale=1, angles='xy', scale_units='xy')
-    plt.title('Velocity Field')
-    plt.axis('equal')
-
-    plt.subplot(2, 2, 4)
-    plt.imshow(vor, cmap='jet')
-    plt.title('Velocity Magnitude')
-    plt.colorbar()
+    # Visualize with streamlines
+    ax2 = plot_streamlines(vx, vy, density=1.5)
+    ax2.set_title('Velocity Field (Streamlines)')
 
     plt.show()
-
-if __name__ == "__main__":
-    main()
