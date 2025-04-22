@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from visualization.vis_flow import vis_flow, plot_streamlines
+from visualization.vis_flow import vis_flow
 
 def plots_set_1(I_region1, I_region2, ux0, uy0, Im1=None, Im2=None, ux=None, uy=None):
     """
