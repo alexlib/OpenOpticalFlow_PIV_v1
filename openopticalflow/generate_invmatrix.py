@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import ndimage
 
-def generate_invmatrix(i: np.ndarray, alpha: float, h: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def generate_invmatrix(i: np.ndarray, alpha: float, h: float) -> tuple:
     """
     Generate inverse matrix for Liu-Shen optical flow estimation.
     Matches MATLAB implementation.
@@ -12,7 +12,7 @@ def generate_invmatrix(i: np.ndarray, alpha: float, h: float) -> tuple[np.ndarra
         h: Spatial step
 
     Returns:
-        tuple[np.ndarray, np.ndarray, np.ndarray]: Inverse matrix components (b11, b12, b22)
+        tuple: Inverse matrix components (b11, b12, b22)
     """
     # Define kernels exactly as in comparison version
     d = np.array([[0, -1, 0], [0, 0, 0], [0, 1, 0]]) / 2
@@ -30,21 +30,21 @@ def generate_invmatrix(i: np.ndarray, alpha: float, h: float) -> tuple[np.ndarra
 
     # Calculate determinant
     det_a = a11*a22 - a12*a12
-    
+
     # Add epsilon for numerical stability
     epsilon = 1e-10
-    
+
     # Initialize output arrays
     b11 = np.zeros_like(det_a)
     b12 = np.zeros_like(det_a)
     b22 = np.zeros_like(det_a)
-    
+
     # Calculate inverse matrix components only where determinant is valid
     valid_mask = np.abs(det_a) > epsilon
     b11[valid_mask] = a22[valid_mask] / det_a[valid_mask]
     b12[valid_mask] = -a12[valid_mask] / det_a[valid_mask]
     b22[valid_mask] = a11[valid_mask] / det_a[valid_mask]
-    
+
     # Handle invalid determinants
     invalid_mask = ~valid_mask
     if np.any(invalid_mask):
