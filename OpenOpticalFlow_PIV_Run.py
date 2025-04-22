@@ -301,11 +301,11 @@ uy[:edge_width, :] = uy[edge_width:2*edge_width, :]
 #  plots_set_2;
 
 # Show the images and processed results
-print("Analysis complete. To visualize results, use:")
-print("from visualization.plots_set_1 import plots_set_1")
-print("from visualization.plots_set_2 import plots_set_2")
-print("plots_set_1(I_region1, I_region2, ux0, uy0, Im1, Im2, ux, uy)")
-print("plots_set_2(ux, uy)")
+# print("Analysis complete. To visualize results, use:")
+# print("from visualization.plots_set_1 import plots_set_1")
+# print("from visualization.plots_set_2 import plots_set_2")
+# print("plots_set_1(I_region1, I_region2, ux0, uy0, Im1, Im2, ux, uy)")
+# print("plots_set_2(ux, uy)")
 
 # % save Ux_vortexpair_hybrid_dt0p2.dat ux -ascii;
 # % save Uy_vortexpair_hybrid_dt0p2.dat uy -ascii;
@@ -333,31 +333,6 @@ results = {
     'Im2': Im2
 }
 
-if __name__ == "__main__":
-    print("Analysis complete. Results stored in 'results' dictionary.")
-    print("To visualize, run the following commands:")
-    print("from visualization.plots_set_1 import plots_set_1")
-    print("from visualization.plots_set_2 import plots_set_2")
-    print("plots_set_1(results['I_region1'], results['I_region2'], results['ux0'], results['uy0'], results['Im1'], results['Im2'], results['ux'], results['uy'])")
-    print("plots_set_2(results['ux'], results['uy'])")
-uy[:, :edge_width] = uy[:, edge_width:2*edge_width]
-ux[:edge_width, :] = ux[edge_width:2*edge_width, :]
-uy[:edge_width, :] = uy[edge_width:2*edge_width, :]
-
-# %% show the images and processed results
-# %% plot the images, velocity vector, and streamlines in the initail and
-# %% refined estimations
-#  plots_set_1;
-#
-# %% plot the fields of velocity magnitude, vorticity and the second invariant Q
-#  plots_set_2;
-
-# Show the images and processed results
-print("Analysis complete. To visualize results, use:")
-print("from visualization.plots_set_1 import plots_set_1")
-print("from visualization.plots_set_2 import plots_set_2")
-print("plots_set_1(I_region1, I_region2, ux0, uy0, Im1, Im2, ux, uy)")
-print("plots_set_2(ux, uy)")
 
 # % save Ux_vortexpair_hybrid_dt0p2.dat ux -ascii;
 # % save Uy_vortexpair_hybrid_dt0p2.dat uy -ascii;
@@ -387,6 +362,6 @@ results = {
 
 
 print("Analysis complete. Results stored in 'results' dictionary.")
-print("To visualize, run the following commands:")
+print("Running visualization")
 plots_set_1(results['I_region1'], results['I_region2'], results['ux0'], results['uy0'], results['Im1'], results['Im2'], results['ux'], results['uy'])
 plots_set_2(results['ux'], results['uy'])
