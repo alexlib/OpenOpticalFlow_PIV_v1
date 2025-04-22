@@ -1,126 +1,112 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-from openopticalflow.vis_flow import vis_flow, plot_streamlines
+from visualization.vis_flow import vis_flow, plot_streamlines
 
-def plots_set_1(im1, im2, ux, uy, Im1=None, Im2=None, ux_full=None, uy_full=None, show_plot=True):
+def plots_set_1(I_region1, I_region2, ux0, uy0, Im1=None, Im2=None, ux=None, uy=None):
     """
-    Create a comprehensive set of plots for optical flow analysis.
-
-    This function creates a set of plots to visualize optical flow results, including:
-    1. Original images
-    2. Velocity field visualization
-    3. Animation showing motion between images
+    Create plots similar to MATLAB's plots_set_1.m script.
 
     Parameters:
-        im1 (numpy.ndarray): First image (processed/downsampled version)
-        im2 (numpy.ndarray): Second image (processed/downsampled version)
-        ux (numpy.ndarray): x-component of velocity field
-        uy (numpy.ndarray): y-component of velocity field
-        Im1 (numpy.ndarray, optional): First image (original/full resolution)
-        Im2 (numpy.ndarray, optional): Second image (original/full resolution)
-        ux_full (numpy.ndarray, optional): x-component of velocity field (full resolution)
-        uy_full (numpy.ndarray, optional): y-component of velocity field (full resolution)
-        show_plot (bool): Whether to call plt.show() (default: True)
-
-    Returns:
-        list: List of created figure objects
+        I_region1: Preprocessed first image
+        I_region2: Preprocessed second image
+        ux0: x-component of coarse-grained velocity field
+        uy0: y-component of coarse-grained velocity field
+        Im1: Original first image (optional)
+        Im2: Original second image (optional)
+        ux: x-component of refined velocity field (optional)
+        uy: y-component of refined velocity field (optional)
     """
-    figures = []
-
-    # If full resolution images not provided, use the processed ones
+    # If original images not provided, use the processed ones
     if Im1 is None:
-        Im1 = im1
+        Im1 = I_region1
     if Im2 is None:
-        Im2 = im2
-    if ux_full is None:
-        ux_full = ux
-    if uy_full is None:
-        uy_full = uy
+        Im2 = I_region2
+    if ux is None:
+        ux = ux0
+    if uy is None:
+        uy = uy0
 
-    # Figure 1: Original images
-    fig1 = plt.figure(figsize=(12, 5))
-    figures.append(fig1)
-
-    plt.subplot(121)
-    plt.imshow(im1, cmap='gray')
-    plt.title('First Image')
+    # Show the pre-processed images in initial estimation
+    plt.figure(1)
+    plt.imshow(I_region1.astype(np.uint8), cmap='gray')
     plt.colorbar()
+    plt.axis('image')
+    plt.title('Downsampled Image 1')
+    plt.xlabel('x (pixels)')
+    plt.ylabel('y (pixels)')
 
-    plt.subplot(122)
-    plt.imshow(im2, cmap='gray')
-    plt.title('Second Image')
+    plt.figure(2)
+    plt.imshow(I_region2.astype(np.uint8), cmap='gray')
     plt.colorbar()
+    plt.axis('image')
+    plt.title('Downsampled Image 2')
+    plt.xlabel('x (pixels)')
+    plt.ylabel('y (pixels)')
 
-    # Figure 2: Velocity field visualization
-    fig2 = plt.figure(figsize=(12, 10))
-    figures.append(fig2)
+    # Plot initial velocity vector field and streamlines
+    plt.figure(3)
+    gx = 30
+    offset = 1
+    h = vis_flow(ux0, uy0, gx, offset, 3, 'm')
+    plt.setp(h, color='red')
+    plt.xlabel('x (pixels)')
+    plt.ylabel('y (pixels)')
+    plt.axis('image')
+    plt.gca().invert_yaxis()  # Equivalent to MATLAB's set(gca,'YDir','reverse')
+    plt.title('Coarse-Grained Velocity Field')
 
-    plt.subplot(221)
-    # Use our improved vis_flow function
-    ax = vis_flow(ux, uy, gx=25, mag=2, color='red', show_plot=False)
-    plt.title('Velocity Field')
+    # Plot streamlines
+    plt.figure(4)
+    m, n = ux0.shape
+    x, y = np.meshgrid(np.arange(n), np.arange(m))
+    dn = 10
+    dm = 10
+    h = plt.streamplot(x, y, ux0, uy0, density=1.5, color='blue')
+    plt.xlabel('x (pixels)')
+    plt.ylabel('y (pixels)')
+    plt.axis('image')
+    plt.gca().invert_yaxis()  # Equivalent to MATLAB's set(gca,'YDir','reverse')
+    plt.title('Coarse-Grained Streamlines')
 
-    plt.subplot(222)
-    # Use our improved plot_streamlines function
-    ax = plot_streamlines(ux, uy, density=1.5, show_plot=False)
-    plt.title('Streamlines')
+    # Plot the original images
+    plt.figure(10)
+    plt.imshow(Im1, cmap='gray')
+    plt.xlabel('x (pixels)')
+    plt.ylabel('y (pixels)')
+    plt.axis('image')
+    plt.title('Image 1')
 
-    plt.subplot(223)
-    # Calculate velocity magnitude
-    vel_mag = np.sqrt(ux**2 + uy**2)
-    plt.imshow(vel_mag, cmap='jet')
-    plt.colorbar(label='Velocity Magnitude')
-    plt.title('Velocity Magnitude')
+    plt.figure(11)
+    plt.imshow(Im2, cmap='gray')
+    plt.xlabel('x (pixels)')
+    plt.ylabel('y (pixels)')
+    plt.axis('image')
+    plt.title('Image 2')
 
-    plt.subplot(224)
-    # Calculate vorticity
-    from scipy.ndimage import convolve
-    kernel_x = np.array([[-1, 0, 1]]) / 2
-    kernel_y = np.array([[-1], [0], [1]]) / 2
-    duy_dx = convolve(uy, kernel_x, mode='reflect')
-    dux_dy = convolve(ux, kernel_y, mode='reflect')
-    vorticity = duy_dx - dux_dy
-    plt.imshow(vorticity, cmap='RdBu_r')
-    plt.colorbar(label='Vorticity')
-    plt.title('Vorticity')
+    # Plot refined velocity vector field
+    plt.figure(12)
+    gx = 50
+    offset = 1
+    h = vis_flow(ux, uy, gx, offset, 5, 'm')
+    plt.setp(h, color='red')
+    plt.xlabel('x (pixels)')
+    plt.ylabel('y (pixels)')
+    plt.axis('image')
+    plt.gca().invert_yaxis()  # Equivalent to MATLAB's set(gca,'YDir','reverse')
+    plt.title('Refined Velocity Field')
 
-    # Figure 3: Animation showing motion between images
-    fig3 = plt.figure(figsize=(8, 8))
-    figures.append(fig3)
-    ax = plt.subplot(111)
-    plt.title('Image Sequence Animation')
+    # Plot streamlines
+    plt.figure(13)
+    m, n = ux.shape
+    x, y = np.meshgrid(np.arange(n), np.arange(m))
+    dn = 10
+    dm = 10
+    h = plt.streamplot(x, y, ux, uy, density=1.5, color='blue')
+    plt.xlabel('x (pixels)')
+    plt.ylabel('y (pixels)')
+    plt.axis('image')
+    plt.gca().invert_yaxis()  # Equivalent to MATLAB's set(gca,'YDir','reverse')
+    plt.title('Refined Streamlines')
 
-    # Create animation function
-    frames = [im1, im2]
-    im = plt.imshow(frames[0], cmap='gray', animated=True)
-
-    def update(frame):
-        im.set_array(frames[frame])
-        return [im]
-
-    ani = FuncAnimation(fig3, update, frames=2, interval=500, blit=True)
-
-    if show_plot:
-        plt.tight_layout()
-        plt.show()
-
-    return figures
-
-# Example usage
-if __name__ == "__main__":
-    # Create sample data
-    size = 100
-    # Create sample images
-    im1 = np.random.rand(size, size)
-    im2 = np.random.rand(size, size)
-
-    # Create sample flow field (rotating vortex)
-    y, x = np.meshgrid(np.linspace(-1, 1, size), np.linspace(-1, 1, size), indexing='ij')
-    ux = -y
-    uy = x
-
-    # Create plots
-    figures = plots_set_1(im1, im2, ux, uy)
-
-    plt.show()
+# This is just a plotting script, similar to MATLAB scripts
+# It doesn't run anything when imported

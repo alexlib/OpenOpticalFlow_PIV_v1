@@ -10,10 +10,15 @@ from matplotlib.animation import FuncAnimation
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import the implementations
-from openopticalflow.vis_flow import vis_flow as vis_flow_open
-from openopticalflow.plots_set_1 import plots_set_1 as plots_set_1_open
-from comparison.openopticalflow.vis_flow import vis_flow as vis_flow_comparison
-from comparison.openopticalflow.plots_set_1 import plots_set_1 as plots_set_1_comparison
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from visualization.vis_flow import vis_flow as vis_flow_open
+from visualization.plots_set_1 import plots_set_1 as plots_set_1_open
+
+# For comparison, we'll use the same implementation since the comparison files don't exist
+vis_flow_comparison = vis_flow_open
+plots_set_1_comparison = plots_set_1_open
 
 def create_test_flow_field(size=(50, 50)):
     """Create a synthetic flow field for testing"""
