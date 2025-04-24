@@ -8,8 +8,8 @@ clc
 
 clear;
 
-im1 = '../Sample Images/vortex_pair_particles_1.tif';
-im2 = '../Sample Images/vortex_pair_particles_2.tif';
+im1 = './examples/data/vortex_pair_particles_1.tif';
+im2 = './examples/data/vortex_pair_particles_2.tif';
 
   
 [pivData1] = pivAnalyzeImagePair(im1,im2);
