@@ -5,6 +5,8 @@ This package provides tools for Particle Image Velocimetry (PIV) analysis
 using optical flow methods.
 """
 
+__version__ = "0.1.0"
+
 # Import main functions to make them available at package level
 from .correction_illumination import correction_illumination
 from .pre_processing_a import pre_processing_a

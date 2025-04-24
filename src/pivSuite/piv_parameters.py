@@ -196,6 +196,13 @@ class PIVParameters:
             return getattr(self, key)
         return None
     
+    def __setitem__(self, key, value):
+        """Allow dictionary-like setting of parameters for backward compatibility."""
+        if hasattr(self, key):
+            setattr(self, key, value)
+        else:
+            raise KeyError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
+    
     def get(self, key, default=None):
         """Mimic dictionary get method for backward compatibility."""
         if hasattr(self, key):

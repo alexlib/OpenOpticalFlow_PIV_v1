@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hybrid-piv-opticalflow"
+version = "0.1.0"
+description = "OpenOpticalFlow PIV tools including PIVsuite"
+authors = [
+    {name = "Many authors", email = "alex.liberzon@gmail.com"}
+]
+readme = "README.md"
+license = {file = "LICENSE.txt"}
+requires-python = ">=3.7"
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "imageio",
+    "scikit-image",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = [
+    "openopticalflow",
+    "pivSuite",
+    "HS_PIV",
+    "visualization"
+]
