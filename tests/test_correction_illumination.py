@@ -7,9 +7,8 @@ from time import time
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Import the implementations
-from openopticalflow.correction_illumination import correction_illumination as correction_illumination_open
-from comparison.openopticalflow.correction_illumination import correction_illumination as correction_illumination_comparison
+# Import the implementation
+from openopticalflow.correction_illumination import correction_illumination
 
 def test_correction_illumination():
     """Test and compare both implementations of correction_illumination"""
@@ -52,37 +51,21 @@ def test_correction_illumination():
     for name, img1, img2, window, size_avg in test_cases:
         print(f"\nTesting {name}:")
         
-        # Time the implementations
+        # Time the implementation
         start = time()
-        i1_open, i2_open = correction_illumination_open(img1, img2, window, size_avg)
+        i1_open, i2_open = correction_illumination(img1, img2, window, size_avg)
         time_open = time() - start
         
-        start = time()
-        i1_comp, i2_comp = correction_illumination_comparison(img1, img2, window, size_avg)
-        time_comp = time() - start
-        
-        # Calculate differences
-        diff_i1 = np.abs(i1_open - i1_comp).max()
-        diff_i2 = np.abs(i2_open - i2_comp).max()
-        
         # Print results
-        print(f"Maximum differences:")
-        print(f"  i1: {diff_i1:.8f}")
-        print(f"  i2: {diff_i2:.8f}")
-        
-        print(f"Execution times:")
+        print(f"Execution time:")
         print(f"  Open implementation: {time_open:.6f} seconds")
-        print(f"  Comparison implementation: {time_comp:.6f} seconds")
         
         # Calculate statistics
         i1_open_mean = np.mean(i1_open)
         i2_open_mean = np.mean(i2_open)
-        i1_comp_mean = np.mean(i1_comp)
-        i2_comp_mean = np.mean(i2_comp)
         
         print(f"Mean values:")
         print(f"  Open: i1={i1_open_mean:.2f}, i2={i2_open_mean:.2f}")
-        print(f"  Comparison: i1={i1_comp_mean:.2f}, i2={i2_comp_mean:.2f}")
         
         # Plot results
         plt.figure(figsize=(15, 10))
@@ -118,22 +101,6 @@ def test_correction_illumination():
         plt.imshow(i1_open - i2_open, cmap='RdBu_r')
         plt.colorbar()
         plt.title('Open Implementation - Difference')
-        
-        # Comparison implementation
-        plt.subplot(337)
-        plt.imshow(i1_comp, cmap='gray')
-        plt.colorbar()
-        plt.title('Comparison Implementation - Image 1')
-        
-        plt.subplot(338)
-        plt.imshow(i2_comp, cmap='gray')
-        plt.colorbar()
-        plt.title('Comparison Implementation - Image 2')
-        
-        plt.subplot(339)
-        plt.imshow(i1_comp - i2_comp, cmap='RdBu_r')
-        plt.colorbar()
-        plt.title('Comparison Implementation - Difference')
         
         plt.tight_layout()
         plt.savefig(f'results/correction_illumination_{name.replace(" ", "_")}.png')

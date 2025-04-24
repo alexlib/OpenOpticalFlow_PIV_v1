@@ -8,8 +8,7 @@ from time import time
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import the implementations
-from openopticalflow.shift_image_fun_refine_1 import shift_image_fun_refine_1 as shift_image_open
-from comparison.openopticalflow.shift_image_fun_refine_1 import shift_image_fun_refine_1 as shift_image_comparison
+from openopticalflow.shift_image_fun_refine_1 import shift_image_fun_refine_1
 from openopticalflow.shift_image_fun_refine_1_improved import shift_image_fun_refine_1 as shift_image_improved
 
 def create_test_case(size=(50, 50), noise_level=0.1):

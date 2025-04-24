@@ -1,7 +1,8 @@
 import numpy as np
 from scipy import ndimage
 
-def correction_illumination(im1, im2, window_shifting, size_average):
+def correction_illumination(im1: np.ndarray, im2: np.ndarray, 
+                          window_shifting: list[int], size_average: int) -> tuple[np.ndarray, np.ndarray]:
     """
     Correct illumination differences between two images.
 

@@ -3,6 +3,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from time import time
+import pytest
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -109,7 +110,8 @@ def lamb_oseen_vortex(x, y, t=1.0, nu=0.01, Gamma=1.0):
     return vx, vy, omega
 
 # Helper function to create grid
-def create_grid():
+@pytest.fixture
+def grid():
     n = 100
     x = np.linspace(-np.pi, np.pi, n)
     y = np.linspace(-np.pi, np.pi, n)
@@ -282,7 +284,12 @@ def test_lamb_oseen_vortex(grid):
 
 if __name__ == "__main__":
     # Run tests manually when script is executed directly
-    grid_fixture = create_grid()
+    # Create a grid manually for direct execution
+    n = 100
+    x = np.linspace(-np.pi, np.pi, n)
+    y = np.linspace(-np.pi, np.pi, n)
+    X, Y = np.meshgrid(x, y)
+    grid_fixture = (X, Y, x, y, n)
 
     # Run tests
     test_taylor_green_vortex(grid_fixture)

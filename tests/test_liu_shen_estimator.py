@@ -7,9 +7,8 @@ from time import time
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Import the implementations
-from openopticalflow.liu_shen_estimator import liu_shen_estimator as liu_shen_open
-from comparison.openopticalflow.liu_shen_estimator import liu_shen_estimator as liu_shen_comparison
+# Import the implementation
+from openopticalflow.liu_shen_estimator import liu_shen_estimator
 
 def create_test_case(size=(50, 50), noise_level=0.1):
     """Create synthetic test case with known flow field"""

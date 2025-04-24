@@ -9,7 +9,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import the implementations
 from openopticalflow.liu_shen_estimator import liu_shen_estimator as liu_shen_open
-from comparison.openopticalflow.liu_shen_estimator import liu_shen_estimator as liu_shen_comparison
+# Only use the main implementation
+from openopticalflow.liu_shen_estimator import liu_shen_estimator
 
 def create_test_case(size=(50, 50), noise_level=0.1):
     """Create synthetic test case with known flow field"""
@@ -62,37 +63,21 @@ def test_liu_shen_estimator_final():
     u_open, v_open, error_open = liu_shen_open(I0, I1, f, dx, dt, lambda_param, tol, maxnum, u0, v0)
     time_open = time() - start
 
-    # Time the comparison implementation
-    start = time()
-    u_comp, v_comp, error_comp = liu_shen_comparison(I0, I1, f, dx, dt, lambda_param, tol, maxnum, u0, v0)
-    time_comp = time() - start
-
-    # Calculate differences
-    u_diff = np.abs(u_open - u_comp).max()
-    v_diff = np.abs(v_open - v_comp).max()
+    # No comparison implementation anymore
 
     # Calculate error against ground truth
     u_error_open = np.sqrt(np.mean((u_open - u_true)**2))
     v_error_open = np.sqrt(np.mean((v_open - v_true)**2))
-    u_error_comp = np.sqrt(np.mean((u_comp - u_true)**2))
-    v_error_comp = np.sqrt(np.mean((v_comp - v_true)**2))
 
     # Print results
-    print(f"Maximum differences between implementations:")
-    print(f"  u: {u_diff:.8f}")
-    print(f"  v: {v_diff:.8f}")
-
     print(f"RMSE against ground truth:")
     print(f"  Open: u={u_error_open:.6f}, v={v_error_open:.6f}")
-    print(f"  Comparison: u={u_error_comp:.6f}, v={v_error_comp:.6f}")
 
     print(f"Execution times:")
     print(f"  Open implementation: {time_open:.6f} seconds")
-    print(f"  Comparison implementation: {time_comp:.6f} seconds")
 
     print(f"Convergence:")
     print(f"  Open: {len(error_open)} iterations, final error={error_open[-1]:.8f}")
-    print(f"  Comparison: {len(error_comp)} iterations, final error={error_comp[-1]:.8f}")
 
     # Plot results
     plt.figure(figsize=(15, 10))
@@ -143,8 +128,7 @@ def test_liu_shen_estimator_final():
 
     # Convergence
     plt.subplot(339)
-    plt.semilogy(error_open, 'b-', label='Open')
-    plt.semilogy(error_comp, 'r--', label='Comparison')
+    plt.semilogy(error_open, 'b-', label='Implementation')
     plt.xlabel('Iteration')
     plt.ylabel('Error (log scale)')
     plt.title('Convergence')

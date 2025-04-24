@@ -26,8 +26,10 @@ def pre_processing_a(Im1: np.ndarray, Im2: np.ndarray, scale_im: float, size_fil
         Im2 = zoom(Im2, scale_im, order=1)
 
     # Apply Gaussian filter to images
-    Im1 = gaussian_filter(Im1, sigma=size_filter)
-    Im2 = gaussian_filter(Im2, sigma=size_filter)
+    # Apply Gaussian filter to images
+    sigma = size_filter * 0.62 if size_filter > 1 else size_filter
+    Im1 = gaussian_filter(Im1, sigma=sigma)
+    Im2 = gaussian_filter(Im2, sigma=sigma)
 
     return Im1, Im2
 

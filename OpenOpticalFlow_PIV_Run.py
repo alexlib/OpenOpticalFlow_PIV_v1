@@ -13,7 +13,7 @@ import os
 import sys
 
 # Add parent directory to Python path to allow imports from sibling packages
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+local_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Import from openopticalflow package
 from openopticalflow.correction_illumination import correction_illumination
@@ -45,8 +45,8 @@ from visualization.plots_set_2 import plots_set_2
 
 # Load images
 try:
-    Im1 = imageio.imread('./images/White_Oval_1.tif')
-    Im2 = imageio.imread('./images/White_Oval_2.tif')
+    Im1 = imageio.imread(os.path.join(local_dir, 'images', 'White_Oval_1.tif')) 
+    Im2 = imageio.imread(os.path.join(local_dir, 'images', 'White_Oval_2.tif'))
     print("Successfully loaded White_Oval images")
 except Exception as e:
     print(f"Error loading White_Oval images: {e}")

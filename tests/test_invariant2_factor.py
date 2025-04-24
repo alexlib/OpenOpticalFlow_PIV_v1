@@ -11,7 +11,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from openopticalflow.invariant2_factor import invariant2_factor as invariant2_factor_open
 from openopticalflow.invariant2_factor import invariant2_factor_loop as invariant2_factor_loop
 from openopticalflow.invariant2_factor import invariant2_factor_vectorized as invariant2_factor_vectorized
-from comparison.openopticalflow.invariant2_factor import invariant2_factor as invariant2_factor_comparison
 
 def test_invariant2_factor_implementations():
     """Test and compare all implementations of invariant2_factor"""
@@ -63,9 +62,9 @@ def test_invariant2_factor_implementations():
         qq_vectorized = invariant2_factor_vectorized(vx, vy, factor_x, factor_y)
         time_vectorized = time() - start
 
-        start = time()
-        qq_comparison = invariant2_factor_comparison(vx, vy, factor_x, factor_y)
-        time_comparison = time() - start
+        # No comparison implementation anymore
+        time_comparison = 0
+        qq_comparison = np.zeros_like(qq_vectorized)
 
         # Calculate differences
         diff_open_loop = np.abs(qq_open - qq_loop).max()
