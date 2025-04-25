@@ -15,14 +15,14 @@ clc
 % Im1=imread('I1_vortexpair_dt0p05.tif');
 % Im2=imread('I2_vortexpair_dt0p05.tif');
 
-% Im1=imread('wall_jet_1.tif');
-% Im2=imread('wall_jet_2.tif');
+Im1=imread('wall_jet_1.tif');
+Im2=imread('wall_jet_2.tif');
 
 % Im1=imread('twin_jet_1.tif');
 % Im2=imread('twin_jet_2.tif');
 
-Im1=imread('White_Oval_1.tif');
-Im2=imread('White_Oval_2.tif');
+% Im1=imread('White_Oval_1.tif');
+% Im2=imread('White_Oval_2.tif');
 
 
 
